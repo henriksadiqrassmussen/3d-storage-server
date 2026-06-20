@@ -264,7 +264,7 @@ app.delete('/api/files/:id', async (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ ok: false, error: 'File too large. Max 1 GB in v0.2.0 starter.' });
+  if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ ok: false, error: 'File too large. Max 1 GB in v0.2.1 starter.' });
   res.status(500).json({ ok: false, error: err.message || 'Server error' });
 });
 app.listen(PORT, '0.0.0.0', () => {
