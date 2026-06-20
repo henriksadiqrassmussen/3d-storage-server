@@ -1,18 +1,16 @@
 {
-  "name": "3d-storage-railway-server",
-  "version": "0.1.0",
-  "description": "3D Storage starter backend for Railway, Android and Windows companion app",
+  "name": "3d-storage-server",
+  "version": "0.2.0",
+  "description": "3D Storage server with login email, quota checks, owner-free account and Cloudflare R2-ready storage.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1"
-  },
-  "engines": {
-    "node": ">=18"
   }
 }
