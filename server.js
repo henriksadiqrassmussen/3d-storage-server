@@ -9,7 +9,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const VERSION = '0.5.0';
+const VERSION = '0.5.1';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'vault1973@gmail.com').toLowerCase().trim();
 const STORAGE_DRIVER = (process.env.STORAGE_DRIVER || 'local').toLowerCase().trim();
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -26,9 +26,10 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 102
 const PLANS = {
   OWNER_FREE: { planName: 'Owner free', quotaBytes: 10 * 1024 ** 4, priceEuro: 0, subscriptionStatus: 'owner_free' },
   FREE_TEST: { planName: 'Free test', quotaBytes: 1 * 1024 ** 3, priceEuro: 0, subscriptionStatus: 'free_test' },
-  STARTER: { planName: 'Starter', quotaBytes: 5 * 1024 ** 3, priceEuro: 3, subscriptionStatus: 'active' },
-  CREATOR: { planName: 'Creator', quotaBytes: 25 * 1024 ** 3, priceEuro: 7, subscriptionStatus: 'active' },
-  STUDIO: { planName: 'Studio', quotaBytes: 100 * 1024 ** 3, priceEuro: 15, subscriptionStatus: 'active' }
+  STARTER_1GB: { planName: 'Starter 1 GB', quotaBytes: 1 * 1024 ** 3, priceEuro: 1, subscriptionStatus: 'active' },
+  CREATOR_5GB: { planName: 'Creator 5 GB', quotaBytes: 5 * 1024 ** 3, priceEuro: 5, subscriptionStatus: 'active' },
+  STUDIO_25GB: { planName: 'Studio 25 GB', quotaBytes: 25 * 1024 ** 3, priceEuro: 25, subscriptionStatus: 'active' },
+  PRO_100GB: { planName: 'Pro 100 GB', quotaBytes: 100 * 1024 ** 3, priceEuro: 100, subscriptionStatus: 'active' }
 };
 
 function safeEmail(email) { return String(email || '').toLowerCase().trim(); }
@@ -46,14 +47,23 @@ function makeKey(email, originalName) {
   return `${safeEmail(email).replace(/[^a-z0-9@._-]/g,'_')}/${stamp}_${rnd}${ext}`;
 }
 
+function normalizeR2AccountId(value) {
+  let v = String(value || '').trim();
+  v = v.replace(/^https?:\/\//i, '');
+  v = v.replace(/\/.*$/, '');
+  v = v.replace(/\.r2\.cloudflarestorage\.com$/i, '');
+  return v.trim();
+}
+
 function getR2Client() {
-  const accountId = process.env.R2_ACCOUNT_ID;
+  const accountId = normalizeR2AccountId(process.env.R2_ACCOUNT_ID);
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   if (!accountId || !accessKeyId || !secretAccessKey) return null;
   return new S3Client({
     region: 'auto',
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey }
   });
 }
@@ -105,7 +115,20 @@ async function downloadUrlOrStream(record, res) {
 }
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/health', (req, res) => res.json({ ok:true, version: VERSION, storageDriver: STORAGE_DRIVER, r2Ready: r2Ready() }));
+app.get('/health', (req, res) => res.json({ ok:true, version: VERSION, storageDriver: STORAGE_DRIVER, r2Ready: r2Ready(), pricing: '1GB=1EUR', r2AccountIdLooksLikeEndpoint: String(process.env.R2_ACCOUNT_ID || '').includes('cloudflarestorage.com') }));
+
+app.get('/api/r2-test', async (req, res) => {
+  try {
+    if (STORAGE_DRIVER !== 'r2') return res.json({ ok:true, message:'R2 er ikke aktiv. STORAGE_DRIVER er ikke r2.' });
+    if (!r2Ready()) return res.status(400).json({ ok:false, error:'R2 variables mangler.' });
+    const key = `_diagnostic/r2-test-${Date.now()}.txt`;
+    await getR2Client().send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key, Body: Buffer.from('r2 ok'), ContentType: 'text/plain' }));
+    await getR2Client().send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
+    res.json({ ok:true, message:'R2 upload/delete test OK', bucket: process.env.R2_BUCKET });
+  } catch (err) {
+    res.status(500).json({ ok:false, error: err.message || String(err), hint:'Tjek at R2_ACCOUNT_ID kun er Account ID, at bucket-navnet er korrekt, og at API-token har Object Read & Write.' });
+  }
+});
 app.get('/api/me', async (req, res) => {
   const email = safeEmail(req.query.email);
   if (!email) return res.status(400).json({ ok:false, error:'E-mail mangler.' });

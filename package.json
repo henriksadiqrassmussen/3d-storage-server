@@ -1,7 +1,7 @@
 {
   "name": "3d-storage-r2-permanent-storage",
-  "version": "0.5.0",
-  "description": "3D Storage website/API with Cloudflare R2 permanent storage, quota and owner-free account",
+  "version": "0.5.1",
+  "description": "3D Storage website/API with Cloudflare R2 permanent storage, quota, owner-free account, SSL fix and 1 EUR per GB pricing",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
