@@ -4,15 +4,17 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } });
 const PORT = process.env.PORT || 3000;
-const VERSION = '0.5.6';
+const VERSION = '0.6.0';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'vault1973@gmail.com').toLowerCase();
 const STORAGE_DRIVER = process.env.STORAGE_DRIVER || 'r2-worker';
 const WORKER_URL = (process.env.WORKER_URL || '').replace(/\/+$/, '');
 const WORKER_SHARED_SECRET = process.env.WORKER_SHARED_SECRET || '';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const PRICING = '1GB=1EUR';
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -23,18 +25,19 @@ function readMeta() {
   try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return []; }
 }
 function writeMeta(files) { fs.writeFileSync(META_FILE, JSON.stringify(files, null, 2)); }
+function cleanEmail(email) { return String(email || '').toLowerCase().trim(); }
 function userPlan(email) {
-  const e = String(email || '').toLowerCase().trim();
+  const e = cleanEmail(email);
   if (e === OWNER_EMAIL) return { email: e, plan: 'OWNER_FREE', planName: 'Owner free', quotaBytes: 10 * 1024 ** 4, subscriptionStatus: 'owner_free', priceEuro: 0 };
   return { email: e, plan: 'FREE_TEST', planName: 'Free test', quotaBytes: 1024 ** 3, subscriptionStatus: 'free_test', priceEuro: 0 };
 }
 function usedBytes(email) {
-  const e = String(email || '').toLowerCase().trim();
+  const e = cleanEmail(email);
   return readMeta().filter(f => f.email === e).reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
 }
 function safeName(name) { return String(name || 'file.bin').replace(/[\\/:*?"<>|]/g, '_').slice(0, 180); }
 function makeKey(email, filename) {
-  const e = encodeURIComponent(String(email || '').toLowerCase().trim());
+  const e = encodeURIComponent(cleanEmail(email));
   return `users/${e}/${Date.now()}_${crypto.randomUUID()}_${safeName(filename)}`;
 }
 function requireWorker() {
@@ -53,27 +56,74 @@ async function workerFetch(pathname, options = {}) {
   });
   return res;
 }
+async function pingWorker() {
+  if (!WORKER_URL || !WORKER_SHARED_SECRET) return false;
+  try {
+    const r = await fetch(`${WORKER_URL}/health`);
+    const j = await r.json().catch(() => ({}));
+    return !!j.ok && !!j.bucketReady && !!j.secretReady;
+  } catch { return false; }
+}
 
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/health', async (req, res) => {
-  let workerPing = false;
-  let workerError = null;
-  if (WORKER_URL && WORKER_SHARED_SECRET) {
-    try {
-      const r = await fetch(`${WORKER_URL}/health`);
-      const j = await r.json().catch(() => ({}));
-      workerPing = !!j.ok && !!j.bucketReady && !!j.secretReady;
-      if (!workerPing) workerError = j;
-    } catch (e) { workerError = e.message; }
+  const workerPing = await pingWorker();
+  res.json({
+    ok: true,
+    version: VERSION,
+    storageDriver: STORAGE_DRIVER,
+    pricing: PRICING,
+    node: process.version,
+    r2Mode: 'railway-worker-proxy-secret-fixed',
+    workerReady: !!(WORKER_URL && WORKER_SHARED_SECRET && workerPing),
+    workerUrlSet: !!WORKER_URL,
+    workerSecretSet: !!WORKER_SHARED_SECRET,
+    workerPing,
+    googleLoginReady: !!GOOGLE_CLIENT_ID,
+    downloadsReady: true
+  });
+});
+
+app.get('/api/google-config', (req, res) => {
+  res.json({ ok: true, googleClientId: GOOGLE_CLIENT_ID || null, googleLoginReady: !!GOOGLE_CLIENT_ID });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    if (!GOOGLE_CLIENT_ID) return res.status(400).json({ ok: false, error: 'GOOGLE_CLIENT_ID mangler i Railway Variables' });
+    const token = req.body?.credential || req.body?.idToken;
+    if (!token) return res.status(400).json({ ok: false, error: 'Google token mangler' });
+    const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const email = cleanEmail(payload?.email);
+    if (!email || !payload?.email_verified) return res.status(401).json({ ok: false, error: 'Google e-mail kunne ikke verificeres' });
+    const plan = userPlan(email);
+    const used = usedBytes(email);
+    res.json({ ok: true, user: { ...plan, name: payload?.name || '', picture: payload?.picture || '', usedBytes: used, freeBytes: Math.max(0, plan.quotaBytes - used) } });
+  } catch (e) {
+    res.status(401).json({ ok: false, error: 'Google-login fejlede: ' + e.message });
   }
-  res.json({ ok: true, version: VERSION, storageDriver: STORAGE_DRIVER, pricing: PRICING, node: process.version, r2Mode: 'railway-worker-proxy-secret-fixed', workerReady: !!(WORKER_URL && WORKER_SHARED_SECRET && workerPing), workerUrlSet: !!WORKER_URL, workerSecretSet: !!WORKER_SHARED_SECRET, workerPing });
+});
+
+app.get('/api/downloads', (req, res) => {
+  const downloadDir = path.join(__dirname, 'public', 'downloads');
+  const apk = path.join(downloadDir, '3d-storage-android.apk');
+  const pc = path.join(downloadDir, '3D_Storage_PC_Companion.zip');
+  res.json({
+    ok: true,
+    downloads: [
+      { type: 'android', label: 'Android APK', path: '/downloads/3d-storage-android.apk', exists: fs.existsSync(apk), fileName: '3d-storage-android.apk' },
+      { type: 'pc', label: 'PC Companion', path: '/downloads/3D_Storage_PC_Companion.zip', exists: fs.existsSync(pc), fileName: '3D_Storage_PC_Companion.zip' }
+    ]
+  });
 });
 
 app.get('/api/me', (req, res) => {
-  const email = String(req.query.email || '').toLowerCase().trim();
+  const email = cleanEmail(req.query.email);
   if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
   const plan = userPlan(email);
   const used = usedBytes(email);
@@ -81,7 +131,7 @@ app.get('/api/me', (req, res) => {
 });
 
 app.get('/api/files', (req, res) => {
-  const email = String(req.query.email || '').toLowerCase().trim();
+  const email = cleanEmail(req.query.email);
   if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
   const files = readMeta().filter(f => f.email === email).sort((a,b)=>b.createdAt-a.createdAt);
   res.json({ ok: true, files });
@@ -89,9 +139,11 @@ app.get('/api/files', (req, res) => {
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
-    const email = String(req.body.email || '').toLowerCase().trim();
+    const email = cleanEmail(req.body.email);
     if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
     if (!req.file) return res.status(400).json({ ok: false, error: 'Fil mangler' });
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    if (!['.fbx','.glb','.gltf','.zip'].includes(ext)) return res.status(400).json({ ok: false, error: 'Kun FBX, GLB, GLTF og ZIP er tilladt' });
     const plan = userPlan(email);
     const used = usedBytes(email);
     if (used + req.file.size > plan.quotaBytes) return res.status(403).json({ ok: false, error: 'Du har ikke nok lagerplads' });
@@ -115,7 +167,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 app.get('/api/download/:id', async (req, res) => {
   try {
-    const email = String(req.query.email || '').toLowerCase().trim();
+    const email = cleanEmail(req.query.email);
     const file = readMeta().find(f => f.id === req.params.id && f.email === email);
     if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
     const workerRes = await workerFetch(`/download?key=${encodeURIComponent(file.key)}`, { method: 'GET' });
@@ -129,7 +181,7 @@ app.get('/api/download/:id', async (req, res) => {
 
 app.delete('/api/files/:id', async (req, res) => {
   try {
-    const email = String(req.query.email || '').toLowerCase().trim();
+    const email = cleanEmail(req.query.email);
     const files = readMeta();
     const idx = files.findIndex(f => f.id === req.params.id && f.email === email);
     if (idx < 0) return res.status(404).json({ ok: false, error: 'File not found' });

@@ -1,6 +1,6 @@
 {
   "name": "3d-storage-website",
-  "version": "0.5.6",
+  "version": "0.6.0",
   "description": "3D Storage website with Railway to Cloudflare Worker R2 proxy upload",
   "main": "server.js",
   "scripts": {
@@ -10,7 +10,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "google-auth-library": "^9.14.2"
   },
   "engines": {
     "node": "20.x"
