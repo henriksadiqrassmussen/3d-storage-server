@@ -7,85 +7,30 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="shell">
-    <aside class="side">
-      <div class="brand"><div class="logo">3D</div><div><b>3D Storage</b><span>Permanent R2</span></div></div>
-      <nav>
-        <a href="#home" class="active">Forside</a>
-        <a href="#login">Login</a>
-        <a href="#upload">Upload</a>
-        <a href="#library">Bibliotek</a>
-        <a href="#downloads">Downloads</a>
-        <a href="#prices">Priser</a>
-      </nav>
-    </aside>
-    <main>
-      <header class="top">
-        <div><h1>3D Storage</h1><p>Upload, gem og hent dine 3D-filer permanent.</p></div>
-        <div class="pill" id="statusPill">Ikke testet</div>
-      </header>
-
-      <section id="home" class="grid hero">
-        <div class="card big">
-          <h2>Dit 3D-lager</h2>
-          <p>Login med e-mail, upload FBX/GLB/ZIP og hent filerne igen fra PC, Android eller browser.</p>
-          <div class="actions">
-            <button id="btnTest">Test server</button>
-            <button id="btnMe" class="secondary">Hent konto</button>
-            <button id="btnFiles" class="secondary">Hent bibliotek</button>
-          </div>
-        </div>
-        <div class="card quota">
-          <h3>Konto</h3>
-          <div id="accountBox" class="muted">Ingen konto hentet endnu.</div>
-        </div>
-      </section>
-
-      <section id="login" class="card section">
-        <h2>Login</h2>
-        <div class="formrow"><label>Server URL</label><input id="baseUrl" value="https://www.3d-storage.org"></div>
-        <div class="formrow"><label>E-mail</label><input id="email" value="vault1973@gmail.com"></div>
-        <div class="actions">
-          <button id="btnSave">Gem</button>
-          <button id="btnGoogle" class="secondary">Google login</button>
-        </div>
-        <p class="hint">Google-knappen er klar i UI. Rigtigt Google OAuth kommer i næste login-version.</p>
-      </section>
-
-      <section id="upload" class="card section">
-        <h2>Upload 3D-fil</h2>
-        <div class="drop" id="dropZone">
-          <strong>Vælg eller slip fil her</strong>
-          <span>FBX, GLB, GLTF, ZIP, OBJ eller BLEND</span>
-          <input type="file" id="fileInput" accept=".fbx,.glb,.gltf,.zip,.obj,.blend">
-        </div>
-        <div class="actions"><button id="btnUpload">Upload fil</button><button id="btnClear" class="secondary">Ryd valg</button></div>
-        <div id="selectedFile" class="muted">Ingen fil valgt.</div>
-      </section>
-
-      <section id="library" class="card section">
-        <div class="rowBetween"><h2>3D Bibliotek</h2><button id="btnRefresh" class="secondary">Opdater</button></div>
-        <div id="fileList" class="files empty">Ingen filer hentet endnu.</div>
-      </section>
-
-      <section id="downloads" class="card section">
-        <h2>Downloads</h2>
-        <div class="downloadGrid">
-          <a class="download" href="/downloads/3d-storage-android.apk">Download Android APK</a>
-          <a class="download" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a>
-        </div>
-      </section>
-
-      <section id="prices" class="grid section">
-        <div class="price"><h3>Free test</h3><b>0€</b><p>1 GB testlager</p></div>
-        <div class="price hot"><h3>Starter</h3><b>3€ / md</b><p>1 GB lager</p></div>
-        <div class="price"><h3>Creator</h3><b>7€ / md</b><p>21 GB lager</p></div>
-        <div class="price"><h3>Studio</h3><b>15€ / md</b><p>25 GB lager</p></div>
-      </section>
-
-      <section class="log card"><h3>Log</h3><div id="log"></div></section>
-    </main>
-  </div>
+  <div class="bg"></div>
+  <header class="topbar">
+    <div class="brand"><span class="logo">3D</span><div><strong>3D Storage</strong><small>Permanent R2 lager</small></div></div>
+    <nav><a href="#login">Login</a><a href="#upload">Upload</a><a href="#library">Bibliotek</a><a href="#downloads">Downloads</a></nav>
+  </header>
+  <main>
+    <section class="hero card">
+      <div>
+        <p class="badge">v0.5.3 · Signed R2 upload · 1 GB = 1 euro</p>
+        <h1>Upload og hent 3D-objekter sikkert.</h1>
+        <p class="lead">Log ind med e-mail, upload FBX/GLB/ZIP direkte til Cloudflare R2 og hent filerne fra PC, web eller Android.</p>
+        <div class="actions"><button onclick="testServer()">Test server</button><button class="secondary" onclick="getAccount()">Hent konto</button></div>
+      </div>
+      <div class="quotaBox"><h3>Konto</h3><p id="accountText">Ikke hentet endnu</p><div class="bar"><span id="quotaBar"></span></div></div>
+    </section>
+    <section id="login" class="grid two">
+      <div class="card"><h2>Login</h2><label>Server URL</label><input id="baseUrl" value="https://www.3d-storage.org"><label>E-mail</label><input id="email" value="vault1973@gmail.com"><div class="actions"><button onclick="testServer()">Test server</button><button class="secondary" onclick="getAccount()">Hent konto / kvote</button></div></div>
+      <div class="card"><h2>Priser</h2><div class="price"><strong>1 GB</strong><span>1 euro/md</span></div><div class="price"><strong>5 GB</strong><span>5 euro/md</span></div><div class="price"><strong>25 GB</strong><span>25 euro/md</span></div><p class="muted">Ejerkontoen vault1973@gmail.com er gratis.</p></div>
+    </section>
+    <section id="upload" class="card"><h2>Upload 3D-fil</h2><p>Vælg FBX, GLB, GLTF eller ZIP. I R2 mode uploader browseren direkte til R2, så Railway undgår SSL/EPROTO-fejlen.</p><input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip"><div class="actions"><button onclick="uploadFile()">Upload fil</button><button class="secondary" onclick="getFiles()">Hent bibliotek</button></div><p id="uploadInfo" class="muted">Ingen fil valgt endnu.</p></section>
+    <section id="library" class="card"><div class="row"><h2>3D Bibliotek</h2><button class="secondary" onclick="getFiles()">Opdater</button></div><div id="files" class="files empty">Ingen filer hentet endnu.</div></section>
+    <section id="downloads" class="grid two"><a class="download card" href="/downloads/3d-storage-android.apk"><h2>Android APK</h2><p>Download 3D Storage til telefon.</p></a><a class="download card" href="/downloads/3D_Storage_PC_Companion.zip"><h2>PC Companion</h2><p>Download Windows makker-app.</p></a></section>
+    <section class="card"><h2>Log</h2><pre id="log"></pre></section>
+  </main>
   <script src="/app.js"></script>
 </body>
 </html>

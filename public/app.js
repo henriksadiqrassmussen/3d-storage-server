@@ -1,22 +1,97 @@
-const $ = (id) => document.getElementById(id);
-let selectedFile = null;
-
-function log(msg){ const t=new Date().toLocaleTimeString('da-DK'); const el=$('log'); el.innerHTML += `[${t}] ${msg}<br>`; el.scrollTop=el.scrollHeight; }
-function cleanBaseUrl(){ let u=($('baseUrl').value||'').trim(); if(!u) return ''; u=u.replace(/\/(health|api\/upload|api\/files).*$/,''); if(!/^https?:\/\//i.test(u)) u='https://'+u; u=u.replace(/\/+$/,''); $('baseUrl').value=u; localStorage.setItem('3ds_baseUrl',u); return u; }
-function email(){ const e=($('email').value||'').trim().toLowerCase(); localStorage.setItem('3ds_email',e); return e; }
-function fmt(bytes){ bytes=Number(bytes||0); const units=['B','KB','MB','GB','TB']; let i=0; while(bytes>=1024&&i<units.length-1){bytes/=1024;i++} return `${bytes.toFixed(i?1:0)} ${units[i]}`; }
-async function api(path, opts={}){ const base=cleanBaseUrl(); if(!base) throw new Error('Server URL mangler.'); const res=await fetch(base+path, opts); let data=null; try{data=await res.json()}catch{} if(!res.ok) throw new Error((data&&data.error)||`HTTP ${res.status}`); return data; }
-function setStatus(text,cls=''){ const p=$('statusPill'); p.textContent=text; p.className='pill '+cls; }
-
-async function testServer(){ try{ log('Tester server...'); const d=await api('/health'); setStatus(`Online v${d.version} · ${d.storageDriver}${d.r2Ready?' · R2 OK':''}`,'ok'); log(`Server OK: v${d.version}, storage=${d.storageDriver}, r2Ready=${!!d.r2Ready}`); }catch(e){ setStatus('Offline','bad'); log('FEJL: '+e.message); } }
-async function getMe(){ try{ const e=email(); if(!e) throw new Error('E-mail mangler.'); log('Henter konto: '+e); const d=await api('/api/me?email='+encodeURIComponent(e)); const u=d.user; $('accountBox').innerHTML=`<b>${u.email}</b><br>Plan: ${u.planName} (${u.plan})<br>Brugt: ${fmt(u.usedBytes)} / ${fmt(u.quotaBytes)}<br>Ledig: ${fmt(u.freeBytes)}<br>Status: ${u.subscriptionStatus}`; log('KONTO OK: '+u.email+' - '+u.plan); }catch(e){ log('FEJL konto: '+e.message); } }
-async function getFiles(){ try{ const e=email(); if(!e) throw new Error('E-mail mangler.'); log('Henter bibliotek...'); const d=await api('/api/files?email='+encodeURIComponent(e)); renderFiles(d.files||[]); log(`Bibliotek OK: ${d.files.length} fil(er)`); }catch(e){ log('FEJL bibliotek: '+e.message); } }
-function renderFiles(files){ const box=$('fileList'); if(!files.length){ box.className='files empty'; box.textContent='Ingen 3D-filer endnu. Upload din første FBX, GLB eller ZIP.'; return; } box.className='files'; box.innerHTML=files.map(f=>`<div class="file"><div><b>${escapeHtml(f.originalName)}</b><br><small>${(f.extension||'fil').toUpperCase()} · ${fmt(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('da-DK')} · downloads ${f.downloadCount||0}</small></div><div class="fileBtns"><button onclick="downloadFile('${f.id}')">Download</button><button class="secondary" onclick="copyLink('${f.id}')">Kopier link</button><button class="secondary" onclick="deleteFile('${f.id}')">Slet</button></div></div>`).join(''); }
-function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function downloadFile(id){ const base=cleanBaseUrl(); const e=email(); window.open(`${base}/api/download/${encodeURIComponent(id)}?email=${encodeURIComponent(e)}`,'_blank'); }
-async function copyLink(id){ const base=cleanBaseUrl(); const e=email(); const link=`${base}/api/download/${encodeURIComponent(id)}?email=${encodeURIComponent(e)}`; await navigator.clipboard.writeText(link); log('Link kopieret.'); }
-async function deleteFile(id){ if(!confirm('Slet filen?')) return; try{ const e=email(); await api('/api/files/'+encodeURIComponent(id)+'?email='+encodeURIComponent(e), {method:'DELETE'}); log('Fil slettet.'); getFiles(); getMe(); }catch(err){ log('FEJL slet: '+err.message); } }
-async function uploadFile(){ try{ const e=email(); if(!e) throw new Error('E-mail mangler.'); if(!selectedFile) throw new Error('Vælg en fil først.'); log('Uploader: '+selectedFile.name); const fd=new FormData(); fd.append('email',e); fd.append('file',selectedFile); const d=await api('/api/upload',{method:'POST',body:fd}); log('UPLOAD OK: '+d.file.originalName); selectedFile=null; $('fileInput').value=''; $('selectedFile').textContent='Ingen fil valgt.'; await getMe(); await getFiles(); }catch(err){ log('FEJL upload: '+err.message); } }
-
-function init(){ $('baseUrl').value=localStorage.getItem('3ds_baseUrl')||'https://www.3d-storage.org'; $('email').value=localStorage.getItem('3ds_email')||'vault1973@gmail.com'; $('btnTest').onclick=testServer; $('btnMe').onclick=getMe; $('btnFiles').onclick=getFiles; $('btnRefresh').onclick=getFiles; $('btnUpload').onclick=uploadFile; $('btnSave').onclick=()=>{cleanBaseUrl();email();log('Indstillinger gemt.');}; $('btnClear').onclick=()=>{selectedFile=null;$('fileInput').value='';$('selectedFile').textContent='Ingen fil valgt.';}; $('btnGoogle').onclick=()=>log('Google login kommer i næste OAuth-version.'); $('fileInput').onchange=(ev)=>{ selectedFile=ev.target.files[0]||null; $('selectedFile').textContent=selectedFile?`Valgt: ${selectedFile.name} (${fmt(selectedFile.size)})`:'Ingen fil valgt.'; }; document.querySelectorAll('nav a').forEach(a=>a.onclick=()=>{document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));a.classList.add('active')}); log('Klar. R2-version 0.5.2. Pris: 1 GB = 1 euro.'); }
-document.addEventListener('DOMContentLoaded', init);
+const logEl = () => document.getElementById('log');
+function log(msg){ const t = new Date().toLocaleTimeString('da-DK'); logEl().textContent += `[${t}] ${msg}\n`; logEl().scrollTop = logEl().scrollHeight; }
+function baseUrl(){
+  let v = document.getElementById('baseUrl').value.trim();
+  if(!v) v = location.origin;
+  if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
+  v = v.replace(/\/(health|api\/upload|api\/files).*$/,'').replace(/\/$/,'');
+  document.getElementById('baseUrl').value = v;
+  return v;
+}
+function email(){ return document.getElementById('email').value.trim().toLowerCase(); }
+function fmt(bytes){
+  bytes = Number(bytes)||0; const u=['B','KB','MB','GB','TB']; let i=0; while(bytes>=1024&&i<u.length-1){bytes/=1024;i++;} return `${bytes.toFixed(i?2:0)} ${u[i]}`;
+}
+async function jsonFetch(url, opts={}){
+  const r = await fetch(url, opts);
+  const txt = await r.text();
+  let data; try{ data = JSON.parse(txt); } catch { data = { ok:false, error:txt || r.statusText }; }
+  if(!r.ok || data.ok===false) throw new Error(data.error || r.statusText);
+  return data;
+}
+async function testServer(){
+  try{ log('Tester server...'); const data=await jsonFetch(`${baseUrl()}/health`); log(`OK: version ${data.version}, storage ${data.storageDriver}, mode ${data.r2Mode||'normal'}`); }
+  catch(e){ log('FEJL server: '+e.message); }
+}
+async function getAccount(){
+  try{
+    if(!email()) return log('FEJL: E-mail mangler.');
+    log('Henter konto: '+email());
+    const data=await jsonFetch(`${baseUrl()}/api/me?email=${encodeURIComponent(email())}`);
+    const u=data.user;
+    document.getElementById('accountText').innerHTML = `<strong>${u.email}</strong><br>${u.planName} · ${fmt(u.usedBytes)} brugt af ${fmt(u.quotaBytes)}<br>${u.subscriptionStatus}`;
+    const pct = Math.min(100, (u.usedBytes/u.quotaBytes)*100);
+    document.getElementById('quotaBar').style.width = pct + '%';
+    log(`KONTO OK: ${u.email} - ${u.plan}`);
+  } catch(e){ log('FEJL konto: '+e.message); }
+}
+async function uploadFile(){
+  const file = document.getElementById('fileInput').files[0];
+  if(!file) return log('FEJL: Vælg en fil først.');
+  if(!email()) return log('FEJL: E-mail mangler.');
+  try{
+    log('Forbereder signed upload: '+file.name);
+    const signed = await jsonFetch(`${baseUrl()}/api/signed-upload-url`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:email(), fileName:file.name, sizeBytes:file.size, mimeType:file.type || 'application/octet-stream' })
+    });
+    log('Uploader direkte til Cloudflare R2...');
+    const put = await fetch(signed.uploadUrl, { method:'PUT', headers:{ 'Content-Type': file.type || 'application/octet-stream' }, body:file });
+    if(!put.ok) throw new Error(`R2 upload svarede ${put.status}. Tjek R2 bucket CORS.`);
+    log('R2 upload OK. Gemmer metadata...');
+    await jsonFetch(`${baseUrl()}/api/confirm-upload`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:email(), id:signed.id, key:signed.key, fileName:file.name, sizeBytes:file.size, mimeType:file.type || 'application/octet-stream' })
+    });
+    document.getElementById('uploadInfo').textContent = `Upload færdig: ${file.name}`;
+    log('UPLOAD OK: '+file.name);
+    await getAccount(); await getFiles();
+  }catch(e){ log('FEJL upload: '+e.message); }
+}
+async function getFiles(){
+  try{
+    if(!email()) return log('FEJL: E-mail mangler.');
+    log('Henter bibliotek...');
+    const data=await jsonFetch(`${baseUrl()}/api/files?email=${encodeURIComponent(email())}`);
+    const wrap=document.getElementById('files');
+    if(!data.files.length){ wrap.className='files empty'; wrap.textContent='Ingen filer endnu. Upload din første FBX, GLB, GLTF eller ZIP.'; return; }
+    wrap.className='files';
+    wrap.innerHTML = data.files.map(f=>`<div class="file"><h3>${escapeHtml(f.originalName)}</h3><small>${f.extension||''} · ${fmt(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('da-DK')}</small><div class="actions"><button onclick="downloadFile('${f.id}')">Download</button><button class="secondary" onclick="deleteFile('${f.id}')">Slet</button></div></div>`).join('');
+    log(`Bibliotek OK: ${data.files.length} filer`);
+  }catch(e){ log('FEJL bibliotek: '+e.message); }
+}
+async function downloadFile(id){
+  try{
+    log('Henter download-link...');
+    const data=await jsonFetch(`${baseUrl()}/api/download/${id}?email=${encodeURIComponent(email())}`);
+    if(data.downloadUrl){ window.open(data.downloadUrl, '_blank'); log('Download-link åbnet.'); }
+    else log('Download svar modtaget.');
+  }catch(e){ log('FEJL download: '+e.message); }
+}
+async function deleteFile(id){
+  if(!confirm('Slet filen fra biblioteket?')) return;
+  try{
+    log('Sletter metadata...');
+    // Try direct R2 physical delete first, then metadata delete.
+    try{
+      const d=await jsonFetch(`${baseUrl()}/api/delete-url/${id}?email=${encodeURIComponent(email())}`);
+      await fetch(d.deleteUrl,{method:'DELETE'});
+      log('R2 objekt slettet direkte.');
+    }catch(e){ log('Bemærk: direkte R2-sletning sprang over: '+e.message); }
+    await jsonFetch(`${baseUrl()}/api/files/${id}?email=${encodeURIComponent(email())}`, {method:'DELETE'});
+    log('SLET OK'); await getFiles(); await getAccount();
+  }catch(e){ log('FEJL slet: '+e.message); }
+}
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+document.getElementById('fileInput').addEventListener('change', e=>{ const f=e.target.files[0]; document.getElementById('uploadInfo').textContent=f?`Valgt: ${f.name} (${fmt(f.size)})`:'Ingen fil valgt.'; });
+log('Klar. v0.5.3 bruger signed direct upload til R2.');
