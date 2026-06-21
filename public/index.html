@@ -1,73 +1,91 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>3D Storage</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="bg"></div>
-  <header class="topbar">
-    <div>
-      <strong class="brand">3D Storage</strong>
-      <span class="tag">3D-filer, APK og PC Companion</span>
-    </div>
-    <div class="status" id="serverStatus">Ikke testet</div>
-  </header>
-
-  <main class="shell">
-    <aside class="sidebar" aria-label="Menu">
-      <button data-view="home" class="nav active">Forside</button>
-      <button data-view="login" class="nav">Login</button>
-      <button data-view="upload" class="nav">Upload</button>
-      <button data-view="library" class="nav">Bibliotek</button>
-      <button data-view="downloads" class="nav">Downloads</button>
-      <button data-view="prices" class="nav">Priser</button>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><div class="logo">3D</div><div><b>3D Storage</b><span>Permanent R2</span></div></div>
+      <nav>
+        <a href="#home" class="active">Forside</a>
+        <a href="#login">Login</a>
+        <a href="#upload">Upload</a>
+        <a href="#library">Bibliotek</a>
+        <a href="#downloads">Downloads</a>
+        <a href="#prices">Priser</a>
+      </nav>
     </aside>
+    <main>
+      <header class="top">
+        <div><h1>3D Storage</h1><p>Upload, gem og hent dine 3D-filer permanent.</p></div>
+        <div class="pill" id="statusPill">Ikke testet</div>
+      </header>
 
-    <section class="content">
-      <section id="home" class="view active">
-        <div class="hero card">
-          <p class="eyebrow">3d-storage.org</p>
-          <h1>Upload, gem og hent dine 3D-objekter.</h1>
-          <p class="lead">Brug store knapper: log ind, upload FBX/GLB/ZIP, hent bibliotek og download Android APK eller PC Companion.</p>
+      <section id="home" class="grid hero">
+        <div class="card big">
+          <h2>Dit 3D-lager</h2>
+          <p>Login med e-mail, upload FBX/GLB/ZIP og hent filerne igen fra PC, Android eller browser.</p>
           <div class="actions">
-            <button class="primary" data-go="login">Log ind</button>
-            <button class="secondary" data-go="upload">Upload 3D-fil</button>
-            <button class="secondary" data-go="downloads">Hent apps</button>
+            <button id="btnTest">Test server</button>
+            <button id="btnMe" class="secondary">Hent konto</button>
+            <button id="btnFiles" class="secondary">Hent bibliotek</button>
           </div>
         </div>
-        <div class="grid">
-          <div class="card"><h3>Konto</h3><p id="accountText">Log ind med e-mail for at se kvote.</p><button id="btnMeHome">Hent konto</button></div>
-          <div class="card"><h3>Lagerplads</h3><p id="quotaText">Ingen data endnu.</p><div class="bar"><span id="quotaBar"></span></div></div>
-          <div class="card"><h3>Server</h3><p>Test om hjemmesiden kan nå Railway.</p><button id="btnHealthHome">Test server</button></div>
+        <div class="card quota">
+          <h3>Konto</h3>
+          <div id="accountBox" class="muted">Ingen konto hentet endnu.</div>
         </div>
       </section>
 
-      <section id="login" class="view">
-        <div class="card narrow"><h2>Login</h2><label>Server URL<input id="baseUrl" value="https://www.3d-storage.org" /></label><label>E-mail<input id="email" value="vault1973@gmail.com" /></label><div class="actions"><button id="btnHealth" class="primary">Test server</button><button id="btnMe" class="secondary">Hent konto</button><button id="btnGoogle" class="google">Google konto</button></div><p class="hint">Google-knappen er klar i UI, men rigtig Google OAuth kræver senere Google keys.</p></div>
+      <section id="login" class="card section">
+        <h2>Login</h2>
+        <div class="formrow"><label>Server URL</label><input id="baseUrl" value="https://www.3d-storage.org"></div>
+        <div class="formrow"><label>E-mail</label><input id="email" value="vault1973@gmail.com"></div>
+        <div class="actions">
+          <button id="btnSave">Gem</button>
+          <button id="btnGoogle" class="secondary">Google login</button>
+        </div>
+        <p class="hint">Google-knappen er klar i UI. Rigtigt Google OAuth kommer i næste login-version.</p>
       </section>
 
-      <section id="upload" class="view">
-        <div class="card narrow"><h2>Upload 3D-fil</h2><p>Vælg FBX, GLB, GLTF eller ZIP.</p><input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip" /><div class="actions"><button id="btnUpload" class="primary">Upload fil</button><button id="btnFilesAfter" class="secondary">Hent bibliotek</button></div></div>
+      <section id="upload" class="card section">
+        <h2>Upload 3D-fil</h2>
+        <div class="drop" id="dropZone">
+          <strong>Vælg eller slip fil her</strong>
+          <span>FBX, GLB, GLTF, ZIP, OBJ eller BLEND</span>
+          <input type="file" id="fileInput" accept=".fbx,.glb,.gltf,.zip,.obj,.blend">
+        </div>
+        <div class="actions"><button id="btnUpload">Upload fil</button><button id="btnClear" class="secondary">Ryd valg</button></div>
+        <div id="selectedFile" class="muted">Ingen fil valgt.</div>
       </section>
 
-      <section id="library" class="view">
-        <div class="card"><div class="row"><h2>3D Bibliotek</h2><button id="btnFiles" class="primary">Hent bibliotek</button></div><div id="files" class="files"><div class="empty">Ingen filer vist endnu. Tryk “Hent bibliotek”.</div></div></div>
+      <section id="library" class="card section">
+        <div class="rowBetween"><h2>3D Bibliotek</h2><button id="btnRefresh" class="secondary">Opdater</button></div>
+        <div id="fileList" class="files empty">Ingen filer hentet endnu.</div>
       </section>
 
-      <section id="downloads" class="view">
-        <div class="grid"><div class="card"><h2>Android APK</h2><p>Installer appen på telefonen.</p><a class="download" href="/downloads/3d-storage-android.apk">Download APK</a></div><div class="card"><h2>PC Companion</h2><p>Windows makker-app til upload og download.</p><a class="download" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a></div></div>
+      <section id="downloads" class="card section">
+        <h2>Downloads</h2>
+        <div class="downloadGrid">
+          <a class="download" href="/downloads/3d-storage-android.apk">Download Android APK</a>
+          <a class="download" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a>
+        </div>
       </section>
 
-      <section id="prices" class="view">
-        <div class="grid"><div class="price card"><h3>Free test</h3><strong>0 €</strong><p>1 GB testplads.</p></div><div class="price card hot"><h3>Creator</h3><strong>7 €/md</strong><p>25 GB til 3D-filer.</p></div><div class="price card"><h3>Studio</h3><strong>15 €/md</strong><p>100 GB til små teams.</p></div></div>
+      <section id="prices" class="grid section">
+        <div class="price"><h3>Free test</h3><b>0€</b><p>1 GB testlager</p></div>
+        <div class="price hot"><h3>Starter</h3><b>3€ / md</b><p>5 GB lager</p></div>
+        <div class="price"><h3>Creator</h3><b>7€ / md</b><p>25 GB lager</p></div>
+        <div class="price"><h3>Studio</h3><b>15€ / md</b><p>100 GB lager</p></div>
       </section>
 
-      <pre id="log" class="log">[klar] Hjemmesiden er indlæst.</pre>
-    </section>
-  </main>
+      <section class="log card"><h3>Log</h3><div id="log"></div></section>
+    </main>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>
