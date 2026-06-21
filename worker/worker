@@ -1,0 +1,59 @@
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const cors = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+      'Access-Control-Expose-Headers': 'ETag,Content-Length,Content-Type'
+    };
+    if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+    try {
+      if (url.pathname === '/health') return json({ ok:true, version:'worker-0.5.5', r2Binding: !!env.R2_BUCKET }, cors);
+      if (url.pathname === '/list') {
+        await requireServerSignature(request, env, `/list?email=${url.searchParams.get('email')||''}`);
+        const email = cleanEmail(url.searchParams.get('email'));
+        const prefix = `users/${encodeURIComponent(email)}/`;
+        const listed = await env.R2_BUCKET.list({ prefix });
+        const files = listed.objects.map(o => ({ key:o.key, name:o.key.split('/').pop().replace(/^\d+_[^_]+_/, ''), size:o.size, uploaded:o.uploaded ? new Date(o.uploaded).toISOString() : '' }));
+        const usedBytes = files.reduce((a,f)=>a+(f.size||0),0);
+        return json({ ok:true, files, usedBytes }, cors);
+      }
+      if (url.pathname === '/upload' && request.method === 'PUT') {
+        const key = url.searchParams.get('key') || '';
+        const email = cleanEmail(url.searchParams.get('email'));
+        const size = Number(url.searchParams.get('size') || 0);
+        const expires = Number(url.searchParams.get('expires') || 0);
+        const token = url.searchParams.get('token') || '';
+        const expected = await hmac(env.WORKER_SHARED_SECRET, `PUT|${key}|${email}|${size}|${expires}`);
+        if (!safeEq(token, expected)) return json({ ok:false, error:'Ugyldig upload-token' }, cors, 403);
+        if (Date.now() > expires) return json({ ok:false, error:'Upload-link er udløbet' }, cors, 403);
+        if (!key.startsWith(`users/${encodeURIComponent(email)}/`)) return json({ ok:false, error:'Forkert key/ejer' }, cors, 403);
+        await env.R2_BUCKET.put(key, request.body, { httpMetadata:{ contentType: request.headers.get('content-type') || 'application/octet-stream' }, customMetadata:{ email, originalName: url.searchParams.get('name') || '' } });
+        return json({ ok:true, key }, cors);
+      }
+      if (url.pathname === '/download' && request.method === 'GET') {
+        const key = url.searchParams.get('key') || ''; const email=cleanEmail(url.searchParams.get('email')); const expires=Number(url.searchParams.get('expires')||0); const token=url.searchParams.get('token')||'';
+        const expected = await hmac(env.WORKER_SHARED_SECRET, `GET|${key}|${email}|${expires}`);
+        if (!safeEq(token, expected) || Date.now()>expires) return json({ ok:false, error:'Ugyldigt download-link' }, cors, 403);
+        if (!key.startsWith(`users/${encodeURIComponent(email)}/`)) return json({ ok:false, error:'Forkert ejer' }, cors, 403);
+        const obj = await env.R2_BUCKET.get(key);
+        if(!obj) return json({ ok:false, error:'Filen findes ikke' }, cors, 404);
+        const headers = new Headers(cors); obj.writeHttpMetadata(headers); headers.set('Content-Disposition', `attachment; filename="${key.split('/').pop()}"`);
+        return new Response(obj.body, { headers });
+      }
+      if (url.pathname === '/delete') {
+        await requireServerSignature(request, env, `/delete?email=${url.searchParams.get('email')||''}&key=${url.searchParams.get('key')||''}`);
+        const email=cleanEmail(url.searchParams.get('email')); const key=url.searchParams.get('key')||'';
+        if (!key.startsWith(`users/${encodeURIComponent(email)}/`)) return json({ ok:false, error:'Forkert ejer' }, cors, 403);
+        await env.R2_BUCKET.delete(key); return json({ ok:true, deleted:key }, cors);
+      }
+      return json({ ok:false, error:'Not found' }, cors, 404);
+    } catch(e) { return json({ ok:false, error:e.message }, cors, 500); }
+  }
+};
+function json(data, headers={}, status=200){ return new Response(JSON.stringify(data), { status, headers:{...headers, 'Content-Type':'application/json'} }); }
+function cleanEmail(e){ return String(e||'').trim().toLowerCase(); }
+async function requireServerSignature(request, env, route){ const ts=request.headers.get('x-3ds-ts')||''; const sig=request.headers.get('x-3ds-signature')||''; if(!ts||!sig) throw new Error('Mangler server-signatur'); if(Math.abs(Date.now()-Number(ts)) > 5*60*1000) throw new Error('Server-signatur udløbet'); const expected=await hmac(env.WORKER_SHARED_SECRET, `${route}|${ts}`); if(!safeEq(sig, expected)) throw new Error('Forkert server-signatur'); }
+async function hmac(secret, msg){ const key=await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), {name:'HMAC', hash:'SHA-256'}, false, ['sign']); const sig=await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg)); return [...new Uint8Array(sig)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+function safeEq(a,b){ return String(a)===String(b); }
