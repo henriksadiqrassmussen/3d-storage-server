@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Storage</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">3d-storage.org</p>
+        <h1>Gem, hent og del dine 3D-filer</h1>
+      </div>
+      <div class="status" id="serverStatus">Ikke testet</div>
+    </header>
+
+    <main class="hero card">
+      <section>
+        <h2>Dit 3D-lager til FBX, GLB, GLTF og ZIP</h2>
+        <p>Log ind med e-mail, upload 3D-objekter og hent dem igen fra Windows eller Android.</p>
+        <div class="heroButtons">
+          <a class="btn primary" href="#upload">Upload 3D-fil</a>
+          <a class="btn secondary" href="#downloads">Download apps</a>
+          <button class="btn ghost" id="testServerBtn">Test server</button>
+        </div>
+      </section>
+      <section class="loginBox">
+        <label for="email">E-mail</label>
+        <input id="email" value="vault1973@gmail.com" autocomplete="email" />
+        <button class="btn primary full" id="loginBtn">Log ind / hent kvote</button>
+        <button class="btn google full" id="googleBtn">Fortsæt med Google</button>
+        <p class="small">Google-login knappen er klar i UI. Rigtig OAuth tilføjes i næste version.</p>
+      </section>
+    </main>
+
+    <section class="grid">
+      <article class="card metric">
+        <span>Plan</span>
+        <strong id="planName">-</strong>
+      </article>
+      <article class="card metric">
+        <span>Brugt</span>
+        <strong id="usedSpace">-</strong>
+      </article>
+      <article class="card metric">
+        <span>Ledig</span>
+        <strong id="freeSpace">-</strong>
+      </article>
+    </section>
+
+    <section id="downloads" class="card section">
+      <h2>Download apps</h2>
+      <p>Hent Android APK og PC Companion. Læg de rigtige filer i <code>public/downloads</code> på serveren.</p>
+      <div class="buttonRow">
+        <a class="btn primary" href="/downloads/3d-storage-android.apk">Download Android APK</a>
+        <a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a>
+      </div>
+    </section>
+
+    <section id="upload" class="card section">
+      <h2>Upload 3D-fil</h2>
+      <p>Vælg en FBX, GLB, GLTF eller ZIP. Flowet er: vælg fil → upload → se i bibliotek.</p>
+      <div class="uploadPanel">
+        <input type="file" id="fileInput" accept=".fbx,.glb,.gltf,.zip" />
+        <button class="btn primary" id="uploadBtn">Upload fil</button>
+        <button class="btn secondary" id="refreshFilesBtn">Hent bibliotek</button>
+      </div>
+      <div class="message" id="message">Klar.</div>
+    </section>
+
+    <section class="card section">
+      <h2>Mit 3D-bibliotek</h2>
+      <div id="files" class="files empty">Ingen filer endnu. Upload din første 3D-fil.</div>
+    </section>
+
+    <section class="pricing">
+      <article class="price card"><h3>Free test</h3><strong>0 €</strong><p>1 GB testlager</p></article>
+      <article class="price card featured"><h3>Creator</h3><strong>7 € / md</strong><p>25 GB til 3D-projekter</p></article>
+      <article class="price card"><h3>Studio</h3><strong>15 € / md</strong><p>100 GB til teams</p></article>
+    </section>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
