@@ -1,6 +1,6 @@
 {
   "name": "3d-storage-r2-permanent-storage",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "3D Storage website/API with Cloudflare R2 permanent storage, quota, owner-free account, SSL fix and 1 EUR per GB pricing",
   "main": "server.js",
   "scripts": {
@@ -12,9 +12,10 @@
     "@aws-sdk/s3-request-presigner": "^3.600.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "@smithy/node-http-handler": "^4.0.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   }
 }

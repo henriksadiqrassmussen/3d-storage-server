@@ -4,12 +4,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadBucketCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { NodeHttpHandler } = require('@smithy/node-http-handler');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-const VERSION = '0.5.1';
+const VERSION = '0.5.2';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'vault1973@gmail.com').toLowerCase().trim();
 const STORAGE_DRIVER = (process.env.STORAGE_DRIVER || 'local').toLowerCase().trim();
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -64,7 +66,12 @@ function getR2Client() {
     region: 'auto',
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     forcePathStyle: true,
-    credentials: { accessKeyId, secretAccessKey }
+    credentials: { accessKeyId, secretAccessKey },
+    requestHandler: new NodeHttpHandler({
+      httpsAgent: new https.Agent({ keepAlive: true, family: 4, maxSockets: 50 }),
+      connectionTimeout: 15000,
+      socketTimeout: 120000
+    })
   });
 }
 function r2Ready() { return !!(getR2Client() && process.env.R2_BUCKET); }
@@ -115,18 +122,43 @@ async function downloadUrlOrStream(record, res) {
 }
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/health', (req, res) => res.json({ ok:true, version: VERSION, storageDriver: STORAGE_DRIVER, r2Ready: r2Ready(), pricing: '1GB=1EUR', r2AccountIdLooksLikeEndpoint: String(process.env.R2_ACCOUNT_ID || '').includes('cloudflarestorage.com') }));
+app.get('/health', (req, res) => {
+  const accountId = normalizeR2AccountId(process.env.R2_ACCOUNT_ID);
+  res.json({
+    ok:true,
+    version: VERSION,
+    storageDriver: STORAGE_DRIVER,
+    r2Ready: r2Ready(),
+    pricing: '1GB=1EUR',
+    node: process.version,
+    r2EndpointHost: accountId ? `${accountId}.r2.cloudflarestorage.com` : null,
+    r2AccountIdLooksLikeEndpoint: String(process.env.R2_ACCOUNT_ID || '').includes('cloudflarestorage.com'),
+    r2Fix: 'node20-ipv4-agent'
+  });
+});
 
 app.get('/api/r2-test', async (req, res) => {
+  const accountId = normalizeR2AccountId(process.env.R2_ACCOUNT_ID);
+  const endpointHost = accountId ? `${accountId}.r2.cloudflarestorage.com` : null;
   try {
     if (STORAGE_DRIVER !== 'r2') return res.json({ ok:true, message:'R2 er ikke aktiv. STORAGE_DRIVER er ikke r2.' });
-    if (!r2Ready()) return res.status(400).json({ ok:false, error:'R2 variables mangler.' });
+    if (!r2Ready()) return res.status(400).json({ ok:false, error:'R2 variables mangler.', required:['R2_ACCOUNT_ID','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','R2_BUCKET'] });
+    const client = getR2Client();
     const key = `_diagnostic/r2-test-${Date.now()}.txt`;
-    await getR2Client().send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key, Body: Buffer.from('r2 ok'), ContentType: 'text/plain' }));
-    await getR2Client().send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
-    res.json({ ok:true, message:'R2 upload/delete test OK', bucket: process.env.R2_BUCKET });
+    await client.send(new PutObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key, Body: Buffer.from('r2 ok'), ContentType: 'text/plain' }));
+    await client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
+    res.json({ ok:true, message:'R2 upload/delete test OK', bucket: process.env.R2_BUCKET, endpointHost, node: process.version, fix:'node20-ipv4-agent' });
   } catch (err) {
-    res.status(500).json({ ok:false, error: err.message || String(err), hint:'Tjek at R2_ACCOUNT_ID kun er Account ID, at bucket-navnet er korrekt, og at API-token har Object Read & Write.' });
+    const msg = err.message || String(err);
+    res.status(500).json({
+      ok:false,
+      error: msg,
+      bucket: process.env.R2_BUCKET || null,
+      endpointHost,
+      node: process.version,
+      fix:'node20-ipv4-agent',
+      hint:'Hvis fejlen stadig er SSL/EPROTO: bekræft at Railway bruger Node 20 efter deploy, og at R2_ACCOUNT_ID er kun Account ID. Ellers opret nye S3 API credentials i Cloudflare R2 med Object Read & Write til bucket.'
+    });
   }
 });
 app.get('/api/me', async (req, res) => {

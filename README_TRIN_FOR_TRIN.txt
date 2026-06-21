@@ -1,36 +1,23 @@
-3D Storage v0.5.0 - R2 PERMANENT STORAGE
+3D Storage v0.5.2 R2 NODE20 IPV4 FIX
 
-Hvad er nyt:
-- Cloudflare R2 permanent storage klar
-- Local storage virker stadig til test
-- OWNER_FREE til vault1973@gmail.com
-- Kvote-tjek før upload
-- Upload/download/slet
-- Hjemmeside i public/
+Upload hele indholdet til GitHub-roden:
+- package.json
+- server.js
+- railway.json
+- public/
+- guides/
 
-GitHub/Railway struktur:
-package.json
-server.js
-railway.json
-public/
-  index.html
-  styles.css
-  app.js
-  downloads/
-
-Railway variables til test/local:
-OWNER_EMAIL=vault1973@gmail.com
-STORAGE_DRIVER=local
-
-Railway variables til R2:
+Railway variables:
 OWNER_EMAIL=vault1973@gmail.com
 STORAGE_DRIVER=r2
-R2_ACCOUNT_ID=...
-R2_ACCESS_KEY_ID=...
-R2_SECRET_ACCESS_KEY=...
-R2_BUCKET=...
+R2_ACCOUNT_ID=kun account id
+R2_ACCESS_KEY_ID=access key id
+R2_SECRET_ACCESS_KEY=secret access key
+R2_BUCKET=bucket-navn
 
-Test:
+Efter deploy:
 https://www.3d-storage.org/health
+Skal vise version 0.5.2, storageDriver r2, r2Ready true og node v20.x.x.
 
-Hvis health viser storageDriver:"r2" og r2Ready:true, bruger serveren R2.
+Test derefter:
+https://www.3d-storage.org/api/r2-test
