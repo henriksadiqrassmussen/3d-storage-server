@@ -1,1 +1,64 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3D Storage</title><link rel="stylesheet" href="/styles.css"></head><body><main class="shell"><section class="hero"><h1>3D Storage</h1><p>Upload, gem og hent 3D-filer permanent. 1 GB = 1 euro. Vault1973 ejerkonto er gratis.</p><div class="row"><a class="btn" href="/downloads/3d-storage-android.apk">Download APK</a><a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a></div></section><section class="card"><h2>Login</h2><label>Server URL<input id="baseUrl" value="https://www.3d-storage.org"></label><label>E-mail<input id="email" value="vault1973@gmail.com"></label><div class="row"><button onclick="testServer()">Test server</button><button onclick="loadMe()">Hent konto / kvote</button><button onclick="loadFiles()">Hent bibliotek</button></div><div id="account" class="notice">Klar.</div></section><section class="card"><h2>Upload 3D-fil</h2><input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip"><button onclick="uploadFile()">Upload til R2</button></section><section class="card"><h2>Bibliotek</h2><div id="files" class="files"></div></section><section class="card log"><h2>Log</h2><div id="log"></div></section></main><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>3D Storage</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero glass">
+      <div>
+        <p class="eyebrow">Permanent 3D-lager</p>
+        <h1>3D Storage</h1>
+        <p>Upload, gem og hent FBX, GLB, GLTF og ZIP-filer permanent via Railway → Worker/R2. Pris: <b>1 GB = 1 euro</b>.</p>
+      </div>
+      <div class="heroActions">
+        <a class="btn" href="/downloads/3d-storage-android.apk">Download Android APK</a>
+        <a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <section class="card glass">
+        <h2>Login</h2>
+        <label>Server URL<input id="baseUrl" value="https://www.3d-storage.org"></label>
+        <label>E-mail<input id="email" value="vault1973@gmail.com"></label>
+        <div class="row"><button onclick="testServer()">Test server</button><button onclick="loadMe()">Hent konto</button><button onclick="loadFiles()">Hent bibliotek</button></div>
+        <div class="googleBox">
+          <div id="googleLoginNotice" class="notice">Google-login tjekkes...</div>
+          <div id="googleButton"></div>
+        </div>
+        <div id="account" class="notice">Klar.</div>
+      </section>
+
+      <section class="card glass">
+        <h2>Downloads</h2>
+        <p>Hent appene til telefon og PC. Læg de rigtige filer i <code>public/downloads</code>.</p>
+        <div id="downloadStatus" class="downloadStatus"></div>
+        <div class="row"><button onclick="checkDownloads()">Tjek downloads</button><a class="btn" href="/downloads/3d-storage-android.apk">APK</a><a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">PC ZIP</a></div>
+      </section>
+    </section>
+
+    <section class="card glass">
+      <h2>Upload 3D-fil</h2>
+      <p class="muted">Flow: vælg fil → tjek kvote → upload til R2 → vis i bibliotek.</p>
+      <input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip">
+      <button onclick="uploadFile()">Upload til permanent lager</button>
+    </section>
+
+    <section class="card glass">
+      <h2>3D Bibliotek</h2>
+      <div id="files" class="files"><p>Ingen filer vist endnu. Tryk “Hent bibliotek”.</p></div>
+    </section>
+
+    <section class="card log glass">
+      <h2>Log</h2>
+      <div id="log"></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
