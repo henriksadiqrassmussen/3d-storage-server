@@ -1,94 +1,145 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
-const VERSION = '0.5.5';
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } });
+const PORT = process.env.PORT || 3000;
+const VERSION = '0.5.6';
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'vault1973@gmail.com').toLowerCase();
 const STORAGE_DRIVER = process.env.STORAGE_DRIVER || 'r2-worker';
-const WORKER_URL = (process.env.WORKER_URL || '').replace(/\/$/, '');
+const WORKER_URL = (process.env.WORKER_URL || '').replace(/\/+$/, '');
 const WORKER_SHARED_SECRET = process.env.WORKER_SHARED_SECRET || '';
+const PRICING = '1GB=1EUR';
 
-app.use(cors({ origin: true, credentials: false }));
-app.use(express.json({ limit: '2mb' }));
+const DATA_DIR = path.join(__dirname, 'data');
+const META_FILE = path.join(DATA_DIR, 'files.json');
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
+function readMeta() {
+  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return []; }
+}
+function writeMeta(files) { fs.writeFileSync(META_FILE, JSON.stringify(files, null, 2)); }
+function userPlan(email) {
+  const e = String(email || '').toLowerCase().trim();
+  if (e === OWNER_EMAIL) return { email: e, plan: 'OWNER_FREE', planName: 'Owner free', quotaBytes: 10 * 1024 ** 4, subscriptionStatus: 'owner_free', priceEuro: 0 };
+  return { email: e, plan: 'FREE_TEST', planName: 'Free test', quotaBytes: 1024 ** 3, subscriptionStatus: 'free_test', priceEuro: 0 };
+}
+function usedBytes(email) {
+  const e = String(email || '').toLowerCase().trim();
+  return readMeta().filter(f => f.email === e).reduce((sum, f) => sum + (f.sizeBytes || 0), 0);
+}
+function safeName(name) { return String(name || 'file.bin').replace(/[\\/:*?"<>|]/g, '_').slice(0, 180); }
+function makeKey(email, filename) {
+  const e = encodeURIComponent(String(email || '').toLowerCase().trim());
+  return `users/${e}/${Date.now()}_${crypto.randomUUID()}_${safeName(filename)}`;
+}
+function requireWorker() {
+  if (STORAGE_DRIVER !== 'r2-worker') throw new Error('STORAGE_DRIVER skal være r2-worker');
+  if (!WORKER_URL) throw new Error('WORKER_URL mangler');
+  if (!WORKER_SHARED_SECRET) throw new Error('WORKER_SHARED_SECRET mangler');
+}
+async function workerFetch(pathname, options = {}) {
+  requireWorker();
+  const res = await fetch(`${WORKER_URL}${pathname}`, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      'x-worker-secret': WORKER_SHARED_SECRET
+    }
+  });
+  return res;
+}
+
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-function gb(n){ return n * 1024 * 1024 * 1024; }
-function cleanEmail(email){ return String(email || '').trim().toLowerCase(); }
-function safeName(name){ return String(name || 'file.bin').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0,180); }
-function userPlan(email){
-  email = cleanEmail(email);
-  if(email === OWNER_EMAIL){ return { email, plan:'OWNER_FREE', planName:'Owner free', quotaBytes: gb(10240), subscriptionStatus:'owner_free', priceEuro:0 }; }
-  return { email, plan:'GB_1', planName:'1 GB', quotaBytes: gb(1), subscriptionStatus:'trial_or_unpaid', priceEuro:1 };
-}
-function sign(payload){ return crypto.createHmac('sha256', WORKER_SHARED_SECRET).update(payload).digest('hex'); }
-function workerReady(){ return !!(WORKER_URL && WORKER_SHARED_SECRET); }
-async function workerJson(route){
-  if(!workerReady()) throw new Error('WORKER_URL eller WORKER_SHARED_SECRET mangler');
-  const ts = Date.now().toString();
-  const payload = `${route}|${ts}`;
-  const sig = sign(payload);
-  const res = await fetch(`${WORKER_URL}${route}`, { headers: { 'x-3ds-ts': ts, 'x-3ds-signature': sig } });
-  const text = await res.text();
-  let data; try { data = JSON.parse(text); } catch { data = { ok:false, error:text }; }
-  if(!res.ok) throw new Error(data.error || `Worker HTTP ${res.status}`);
-  return data;
-}
-
-app.get('/health', (req,res)=>{
-  res.json({ ok:true, version:VERSION, storageDriver:STORAGE_DRIVER, pricing:'1GB=1EUR', node:process.version, r2Mode:'cloudflare-worker-r2-binding', workerReady:workerReady(), workerUrlSet:!!WORKER_URL });
-});
-app.get('/', (req,res)=> res.sendFile(path.join(__dirname,'public','index.html')));
-app.get('/api/me', async (req,res)=>{
-  const email = cleanEmail(req.query.email);
-  if(!email) return res.status(400).json({ ok:false, error:'E-mail mangler' });
-  const plan = userPlan(email);
-  let usedBytes = 0;
-  try { const data = await workerJson(`/list?email=${encodeURIComponent(email)}`); usedBytes = data.usedBytes || 0; } catch(e) {}
-  res.json({ ok:true, user:{...plan, usedBytes, freeBytes: Math.max(0, plan.quotaBytes-usedBytes)} });
-});
-app.get('/api/files', async (req,res)=>{
-  const email = cleanEmail(req.query.email);
-  if(!email) return res.status(400).json({ ok:false, error:'E-mail mangler' });
-  try { const data = await workerJson(`/list?email=${encodeURIComponent(email)}`); res.json(data); }
-  catch(e){ res.status(500).json({ ok:false, error:e.message }); }
-});
-app.post('/api/upload-start', async (req,res)=>{
-  const email = cleanEmail(req.body.email);
-  const fileName = safeName(req.body.fileName);
-  const size = Number(req.body.size || 0);
-  const type = String(req.body.type || 'application/octet-stream');
-  if(!email) return res.status(400).json({ ok:false, error:'E-mail mangler' });
-  if(!fileName) return res.status(400).json({ ok:false, error:'Filnavn mangler' });
-  const plan = userPlan(email);
-  let usedBytes = 0;
-  try { const data = await workerJson(`/list?email=${encodeURIComponent(email)}`); usedBytes = data.usedBytes || 0; } catch(e) {}
-  if(size > 0 && usedBytes + size > plan.quotaBytes) return res.status(403).json({ ok:false, error:'Du har ikke nok lagerplads' });
-  if(!workerReady()) return res.status(500).json({ ok:false, error:'Worker er ikke sat op. Tilføj WORKER_URL og WORKER_SHARED_SECRET i Railway.' });
-  const key = `users/${encodeURIComponent(email)}/${Date.now()}_${crypto.randomUUID()}_${fileName}`;
-  const expires = Date.now() + 15 * 60 * 1000;
-  const payload = `PUT|${key}|${email}|${size}|${expires}`;
-  const token = sign(payload);
-  const uploadUrl = `${WORKER_URL}/upload?key=${encodeURIComponent(key)}&email=${encodeURIComponent(email)}&size=${encodeURIComponent(size)}&expires=${expires}&token=${token}&name=${encodeURIComponent(fileName)}&type=${encodeURIComponent(type)}`;
-  res.json({ ok:true, uploadUrl, key, fileName, expires });
-});
-app.get('/api/download', async (req,res)=>{
-  const email = cleanEmail(req.query.email); const key = String(req.query.key || '');
-  if(!email || !key) return res.status(400).json({ ok:false, error:'E-mail eller key mangler' });
-  const expires = Date.now() + 10 * 60 * 1000;
-  const token = sign(`GET|${key}|${email}|${expires}`);
-  res.json({ ok:true, url:`${WORKER_URL}/download?key=${encodeURIComponent(key)}&email=${encodeURIComponent(email)}&expires=${expires}&token=${token}` });
-});
-app.delete('/api/delete', async (req,res)=>{
-  const email = cleanEmail(req.query.email); const key = String(req.query.key || '');
-  if(!email || !key) return res.status(400).json({ ok:false, error:'E-mail eller key mangler' });
-  const route = `/delete?email=${encodeURIComponent(email)}&key=${encodeURIComponent(key)}`;
-  try { const data = await workerJson(route); res.json(data); } catch(e){ res.status(500).json({ ok:false, error:e.message }); }
-});
-app.get('/api/worker-test', async (req,res)=>{
-  try { const data = await workerJson('/health'); res.json({ ok:true, worker:data }); } catch(e){ res.status(500).json({ ok:false, error:e.message, hint:'Tjek WORKER_URL og WORKER_SHARED_SECRET i Railway og Worker.' }); }
+app.get('/health', async (req, res) => {
+  let workerPing = false;
+  let workerError = null;
+  if (WORKER_URL && WORKER_SHARED_SECRET) {
+    try {
+      const r = await fetch(`${WORKER_URL}/health`);
+      const j = await r.json().catch(() => ({}));
+      workerPing = !!j.ok && !!j.bucketReady && !!j.secretReady;
+      if (!workerPing) workerError = j;
+    } catch (e) { workerError = e.message; }
+  }
+  res.json({ ok: true, version: VERSION, storageDriver: STORAGE_DRIVER, pricing: PRICING, node: process.version, r2Mode: 'railway-worker-proxy-secret-fixed', workerReady: !!(WORKER_URL && WORKER_SHARED_SECRET && workerPing), workerUrlSet: !!WORKER_URL, workerSecretSet: !!WORKER_SHARED_SECRET, workerPing });
 });
 
-app.listen(PORT, ()=> console.log(`3D Storage v${VERSION} on ${PORT}`));
+app.get('/api/me', (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
+  const plan = userPlan(email);
+  const used = usedBytes(email);
+  res.json({ ok: true, user: { ...plan, usedBytes: used, freeBytes: Math.max(0, plan.quotaBytes - used) } });
+});
+
+app.get('/api/files', (req, res) => {
+  const email = String(req.query.email || '').toLowerCase().trim();
+  if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
+  const files = readMeta().filter(f => f.email === email).sort((a,b)=>b.createdAt-a.createdAt);
+  res.json({ ok: true, files });
+});
+
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  try {
+    const email = String(req.body.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ ok: false, error: 'E-mail mangler' });
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Fil mangler' });
+    const plan = userPlan(email);
+    const used = usedBytes(email);
+    if (used + req.file.size > plan.quotaBytes) return res.status(403).json({ ok: false, error: 'Du har ikke nok lagerplads' });
+    const key = makeKey(email, req.file.originalname);
+    const workerRes = await workerFetch(`/upload?key=${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: { 'content-type': req.file.mimetype || 'application/octet-stream' },
+      body: req.file.buffer
+    });
+    const txt = await workerRes.text();
+    if (!workerRes.ok) return res.status(workerRes.status).json({ ok: false, error: `Worker upload HTTP ${workerRes.status}: ${txt}` });
+    const record = {
+      id: crypto.randomUUID(), email, originalName: req.file.originalname, key,
+      sizeBytes: req.file.size, mimeType: req.file.mimetype || 'application/octet-stream',
+      createdAt: Date.now()
+    };
+    const files = readMeta(); files.push(record); writeMeta(files);
+    res.json({ ok: true, file: record });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/download/:id', async (req, res) => {
+  try {
+    const email = String(req.query.email || '').toLowerCase().trim();
+    const file = readMeta().find(f => f.id === req.params.id && f.email === email);
+    if (!file) return res.status(404).json({ ok: false, error: 'File not found' });
+    const workerRes = await workerFetch(`/download?key=${encodeURIComponent(file.key)}`, { method: 'GET' });
+    if (!workerRes.ok) return res.status(workerRes.status).send(await workerRes.text());
+    res.setHeader('Content-Type', workerRes.headers.get('content-type') || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName(file.originalName)}"`);
+    const buf = Buffer.from(await workerRes.arrayBuffer());
+    res.send(buf);
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.delete('/api/files/:id', async (req, res) => {
+  try {
+    const email = String(req.query.email || '').toLowerCase().trim();
+    const files = readMeta();
+    const idx = files.findIndex(f => f.id === req.params.id && f.email === email);
+    if (idx < 0) return res.status(404).json({ ok: false, error: 'File not found' });
+    const file = files[idx];
+    const workerRes = await workerFetch(`/delete?key=${encodeURIComponent(file.key)}`, { method: 'DELETE' });
+    if (!workerRes.ok) return res.status(workerRes.status).send(await workerRes.text());
+    files.splice(idx, 1); writeMeta(files);
+    res.json({ ok: true, deleted: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.listen(PORT, () => console.log(`3D Storage v${VERSION} on ${PORT}`));
