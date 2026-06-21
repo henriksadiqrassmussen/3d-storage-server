@@ -1,20 +1,9 @@
 {
   "name": "3d-storage-website",
-  "version": "0.5.4",
-  "description": "3D Storage with signed direct R2 upload, HTTPS URL hardening and 1GB=1EUR pricing",
+  "version": "0.5.5",
+  "description": "3D Storage website with R2 Worker upload fallback",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.637.0",
-    "@aws-sdk/s3-request-presigner": "^3.637.0",
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "mime-types": "^2.1.35"
-  },
-  "engines": {
-    "node": "20.x"
-  }
+  "scripts": {"start":"node server.js","dev":"node server.js"},
+  "dependencies": {"cors":"^2.8.5","express":"^4.19.2"},
+  "engines": {"node":"20.x"}
 }
