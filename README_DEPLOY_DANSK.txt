@@ -1,20 +1,32 @@
-Upload disse filer til GitHub-roden:
+3D Storage v0.5.4 - Signed URL HTTPS Fixed
+
+Upload hele indholdet til GitHub-roden:
 package.json
 server.js
 railway.json
-public/
-guides/
+public/index.html
+public/styles.css
+public/app.js
 
-Efter Railway redeploy:
+Railway variables:
+OWNER_EMAIL=vault1973@gmail.com
+STORAGE_DRIVER=r2
+R2_ACCOUNT_ID=kun account id, ingen https://
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET=3d-storage-files
+
+Cloudflare R2 CORS:
+[
+  {
+    "AllowedOrigins": ["https://www.3d-storage.org", "https://3d-storage.org"],
+    "AllowedMethods": ["GET", "PUT", "DELETE", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+
+Efter deploy test:
 https://www.3d-storage.org/health
-skal vise version 0.5.3 og r2Mode signed-direct-upload.
-
-Test:
-1. Åbn https://www.3d-storage.org
-2. Log ind med vault1973@gmail.com
-3. Upload en lille .fbx/.glb/.zip
-4. Hent bibliotek
-5. Download filen
-
-Hvis upload fejler med CORS:
-Sæt CORS på Cloudflare R2 bucket som vist i guides/README_R2_CORS_DANSK.txt
+Skal vise version 0.5.4 og signedUrlHttpsFix true.
