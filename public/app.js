@@ -1,47 +1,20 @@
-const $ = (id) => document.getElementById(id);
-const state = { email: localStorage.getItem('email') || 'vault1973@gmail.com' };
-$('email').value = state.email;
-function setMsg(text, type='') { const m=$('message'); m.textContent=text; m.className='message '+type; }
-async function json(url, opts) { const r=await fetch(url, opts); if(!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json(); }
-async function testServer(){
-  try{ const d=await json('/health'); $('serverStatus').textContent=`Online v${d.version}`; $('serverStatus').style.color='#16a34a'; setMsg('Serveren svarer.', 'ok'); }
-  catch(e){ $('serverStatus').textContent='Offline'; $('serverStatus').style.color='#dc2626'; setMsg('Serveren svarer ikke: '+e.message,'bad'); }
-}
-async function loadMe(){
-  const email=$('email').value.trim(); if(!email) return setMsg('E-mail mangler.','bad');
-  localStorage.setItem('email', email); state.email=email;
-  try{ const d=await json(`/api/me?email=${encodeURIComponent(email)}`); $('planName').textContent=d.user.planName; $('usedSpace').textContent=d.user.usedHuman || human(d.user.usedBytes); $('freeSpace').textContent=d.user.freeHuman || human(d.user.freeBytes); setMsg('Konto fundet: '+d.user.plan,'ok'); }
-  catch(e){ setMsg('Kunne ikke hente konto: '+e.message,'bad'); }
-}
-function human(bytes){ const u=['B','KB','MB','GB','TB']; let v=Number(bytes||0),i=0; while(v>=1024&&i<u.length-1){v/=1024;i++} return `${v.toFixed(i?2:0)} ${u[i]}`; }
-async function uploadFile(){
-  const file=$('fileInput').files[0]; const email=$('email').value.trim();
-  if(!email) return setMsg('E-mail mangler.','bad'); if(!file) return setMsg('Vælg en fil først.','bad');
-  const fd=new FormData(); fd.append('email',email); fd.append('file',file);
-  setMsg('Uploader '+file.name+' ...');
-  try{ await json('/api/upload',{method:'POST',body:fd}); setMsg('Upload færdig. Filen ligger nu i dit 3D-bibliotek.','ok'); await loadMe(); await loadFiles(); }
-  catch(e){ setMsg('Upload mislykkedes: '+e.message,'bad'); }
-}
-async function loadFiles(){
-  const email=$('email').value.trim(); if(!email) return setMsg('E-mail mangler.','bad');
-  try{ const d=await json(`/api/files?email=${encodeURIComponent(email)}`); renderFiles(d.files||[]); setMsg('Bibliotek hentet.','ok'); }
-  catch(e){ setMsg('Kunne ikke hente filer: '+e.message,'bad'); }
-}
-function renderFiles(files){
-  const wrap=$('files');
-  if(!files.length){ wrap.className='files empty'; wrap.textContent='Ingen filer endnu. Upload din første 3D-fil.'; return; }
-  wrap.className='files'; wrap.innerHTML='';
-  for(const f of files){
-    const div=document.createElement('div'); div.className='fileCard';
-    div.innerHTML=`<div><h3>${escapeHtml(f.originalName)}</h3><p>${f.extension || ''} · ${f.sizeHuman || human(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('da-DK')}</p></div><div class="buttonRow"><a class="btn secondary" href="/api/download/${f.id}?email=${encodeURIComponent(state.email)}">Download</a><button class="btn ghost" data-id="${f.id}">Slet</button></div>`;
-    div.querySelector('button').addEventListener('click',()=>deleteFile(f.id)); wrap.appendChild(div);
-  }
-}
-async function deleteFile(id){
-  if(!confirm('Slet filen?')) return;
-  try{ await json(`/api/files/${id}?email=${encodeURIComponent($('email').value.trim())}`,{method:'DELETE'}); setMsg('Filen er slettet.','ok'); await loadMe(); await loadFiles(); }
-  catch(e){ setMsg('Kunne ikke slette: '+e.message,'bad'); }
-}
-function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-$('testServerBtn').addEventListener('click', testServer); $('loginBtn').addEventListener('click', async()=>{await testServer(); await loadMe(); await loadFiles();}); $('uploadBtn').addEventListener('click', uploadFile); $('refreshFilesBtn').addEventListener('click', loadFiles); $('googleBtn').addEventListener('click',()=>setMsg('Google-login er klar i UI. OAuth keys tilføjes i næste version.'));
-testServer(); loadMe().catch(()=>{});
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const logEl = $('log');
+  function log(msg){ const time=new Date().toLocaleTimeString('da-DK',{hour12:false}); logEl.textContent += `\n[${time}] ${msg}`; logEl.scrollTop=logEl.scrollHeight; }
+  function base(){ let v=($('baseUrl')?.value||location.origin).trim(); v=v.replace(/\/(health|api\/.*)$/,''); if(!/^https?:\/\//i.test(v)) v='https://'+v; v=v.replace(/\/+$/,''); if($('baseUrl')) $('baseUrl').value=v; return v; }
+  function email(){ return ($('email')?.value||'vault1973@gmail.com').trim(); }
+  function setStatus(text, cls){ const s=$('serverStatus'); if(!s) return; s.textContent=text; s.className='status '+(cls||''); }
+  function show(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('active')); document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===id)); $(id)?.classList.add('active'); }
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.go)));
+  async function health(){ log('Tester server...'); try{ const r=await fetch(base()+'/health'); const j=await r.json(); if(!j.ok) throw new Error('Ikke OK'); setStatus('Online v'+j.version,'ok'); log('Serveren svarer. Version: '+j.version); }catch(e){ setStatus('Offline','bad'); log('FEJL: '+e.message); } }
+  async function me(){ log('Henter konto: '+email()); try{ const r=await fetch(base()+'/api/me?email='+encodeURIComponent(email())); const j=await r.json(); if(!j.ok) throw new Error(j.error||'Konto-fejl'); const u=j.user; $('accountText').textContent=`${u.email} - ${u.plan}`; const used=u.usedBytes||0, quota=u.quotaBytes||1, pct=Math.min(100, used/quota*100); $('quotaText').textContent=`Brugt: ${fmt(used)} / ${fmt(quota)} - Ledig: ${fmt(u.freeBytes)}`; $('quotaBar').style.width=pct+'%'; log('KONTO OK: '+u.email+' - '+u.plan); }catch(e){ log('FEJL konto: '+e.message); } }
+  function fmt(n){ const u=['B','KB','MB','GB','TB']; let i=0; n=Number(n||0); while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+' '+u[i]; }
+  async function files(){ log('Henter bibliotek...'); try{ const r=await fetch(base()+'/api/files?email='+encodeURIComponent(email())); const j=await r.json(); if(!j.ok) throw new Error(j.error||'Fil-fejl'); const el=$('files'); if(!j.files.length){ el.innerHTML='<div class="empty">Ingen filer endnu. Upload din første 3D-fil.</div>'; return; } el.innerHTML=j.files.map(f=>`<div class="file"><div><b>${esc(f.originalName||f.name)}</b><small>${f.sizeHuman||fmt(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('da-DK')}</small></div><div class="actions"><a class="secondary" href="${f.url}">Download</a><button class="secondary" data-copy="${f.url}">Kopier</button><button class="secondary" data-del="${f.id}">Slet</button></div></div>`).join(''); log('Bibliotek hentet: '+j.files.length+' filer'); }catch(e){ log('FEJL bibliotek: '+e.message); } }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+  async function upload(){ const input=$('fileInput'); if(!input.files||!input.files[0]) return log('Vælg en fil først.'); const fd=new FormData(); fd.append('email',email()); fd.append('file',input.files[0]); log('Uploader: '+input.files[0].name); try{ const r=await fetch(base()+'/api/upload',{method:'POST',body:fd}); const j=await r.json(); if(!j.ok) throw new Error(j.error||'Upload-fejl'); log('Upload færdig.'); await me(); await files(); show('library'); }catch(e){ log('FEJL upload: '+e.message); } }
+  document.addEventListener('click',async e=>{ const c=e.target.closest('[data-copy]'); if(c){ await navigator.clipboard.writeText(location.origin+c.dataset.copy); log('Link kopieret.'); } const d=e.target.closest('[data-del]'); if(d&&confirm('Slet fil?')){ const r=await fetch(base()+'/api/files/'+d.dataset.del,{method:'DELETE'}); const j=await r.json(); log(j.ok?'Fil slettet.':'FEJL: '+(j.error||'Kunne ikke slette.')); await files(); await me(); }});
+  $('btnHealth')?.addEventListener('click',health); $('btnHealthHome')?.addEventListener('click',health); $('btnMe')?.addEventListener('click',me); $('btnMeHome')?.addEventListener('click',me); $('btnFiles')?.addEventListener('click',files); $('btnFilesAfter')?.addEventListener('click',files); $('btnUpload')?.addEventListener('click',upload); $('btnGoogle')?.addEventListener('click',()=>log('Google-login er klar i UI. OAuth keys tilføjes senere.'));
+  health();
+})();
