@@ -1,97 +1,89 @@
-const logEl = () => document.getElementById('log');
-function log(msg){ const t = new Date().toLocaleTimeString('da-DK'); logEl().textContent += `[${t}] ${msg}\n`; logEl().scrollTop = logEl().scrollHeight; }
-function baseUrl(){
-  let v = document.getElementById('baseUrl').value.trim();
-  if(!v) v = location.origin;
-  if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
-  v = v.replace(/\/(health|api\/upload|api\/files).*$/,'').replace(/\/$/,'');
-  document.getElementById('baseUrl').value = v;
-  return v;
+const logBox = document.getElementById('log');
+function log(msg){ const t=new Date().toLocaleTimeString('da-DK'); logBox.textContent += `[${t}] ${msg}\n`; logBox.scrollTop=logBox.scrollHeight; }
+function base(){
+  let u = document.getElementById('serverUrl').value.trim();
+  if(!u) u = location.origin;
+  if(u.startsWith('//')) u = 'https:' + u;
+  if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  u = u.replace(/\/(health|api\/.*)$/i,'');
+  u = u.replace(/\/+$/,'');
+  document.getElementById('serverUrl').value = u;
+  return u;
 }
 function email(){ return document.getElementById('email').value.trim().toLowerCase(); }
-function fmt(bytes){
-  bytes = Number(bytes)||0; const u=['B','KB','MB','GB','TB']; let i=0; while(bytes>=1024&&i<u.length-1){bytes/=1024;i++;} return `${bytes.toFixed(i?2:0)} ${u[i]}`;
+function normalizeSignedUrl(url){
+  let u = String(url || '').trim();
+  if(u.startsWith('//')) u = 'https:' + u;
+  if(!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
 }
-async function jsonFetch(url, opts={}){
-  const r = await fetch(url, opts);
+function fmt(bytes){
+  bytes=Number(bytes||0); const units=['B','KB','MB','GB','TB']; let i=0;
+  while(bytes>=1024 && i<units.length-1){bytes/=1024;i++;}
+  return `${bytes.toFixed(i?2:0)} ${units[i]}`;
+}
+async function api(path, opts={}){
+  const r = await fetch(base()+path, opts);
   const txt = await r.text();
-  let data; try{ data = JSON.parse(txt); } catch { data = { ok:false, error:txt || r.statusText }; }
-  if(!r.ok || data.ok===false) throw new Error(data.error || r.statusText);
+  let data; try{ data=JSON.parse(txt); }catch{ data={ok:false,error:txt}; }
+  if(!r.ok || data.ok===false) throw new Error(data.error || `HTTP ${r.status}`);
   return data;
 }
 async function testServer(){
-  try{ log('Tester server...'); const data=await jsonFetch(`${baseUrl()}/health`); log(`OK: version ${data.version}, storage ${data.storageDriver}, mode ${data.r2Mode||'normal'}`); }
+  try{ log('Tester server...'); const d=await api('/health'); document.getElementById('statusPill').textContent=`v${d.version} · ${d.storageDriver}`; log(`OK: v${d.version}, ${d.r2Mode||d.storageDriver}`); }
   catch(e){ log('FEJL server: '+e.message); }
 }
-async function getAccount(){
-  try{
-    if(!email()) return log('FEJL: E-mail mangler.');
-    log('Henter konto: '+email());
-    const data=await jsonFetch(`${baseUrl()}/api/me?email=${encodeURIComponent(email())}`);
-    const u=data.user;
-    document.getElementById('accountText').innerHTML = `<strong>${u.email}</strong><br>${u.planName} · ${fmt(u.usedBytes)} brugt af ${fmt(u.quotaBytes)}<br>${u.subscriptionStatus}`;
-    const pct = Math.min(100, (u.usedBytes/u.quotaBytes)*100);
-    document.getElementById('quotaBar').style.width = pct + '%';
-    log(`KONTO OK: ${u.email} - ${u.plan}`);
-  } catch(e){ log('FEJL konto: '+e.message); }
+async function loadAccount(){
+  try{ log('Henter konto: '+email()); const d=await api('/api/me?email='+encodeURIComponent(email())); const u=d.user; document.getElementById('accountBox').textContent = `E-mail: ${u.email}\nPlan: ${u.plan}\nBrugt: ${fmt(u.usedBytes)}\nLedig: ${fmt(u.freeBytes)}\nKvote: ${fmt(u.quotaBytes)}\nPris: 1 GB = 1 euro`; log(`KONTO OK: ${u.email} - ${u.plan}`); }
+  catch(e){ log('FEJL konto: '+e.message); }
 }
 async function uploadFile(){
-  const file = document.getElementById('fileInput').files[0];
-  if(!file) return log('FEJL: Vælg en fil først.');
-  if(!email()) return log('FEJL: E-mail mangler.');
+  const f = document.getElementById('fileInput').files[0];
+  if(!f){ log('Vælg en fil først.'); return; }
   try{
-    log('Forbereder signed upload: '+file.name);
-    const signed = await jsonFetch(`${baseUrl()}/api/signed-upload-url`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email:email(), fileName:file.name, sizeBytes:file.size, mimeType:file.type || 'application/octet-stream' })
-    });
+    document.getElementById('uploadStatus').textContent='Forbereder upload...';
+    log('Forbereder signed upload: '+f.name);
+    const prep = await api('/api/upload-url', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email(), fileName:f.name, sizeBytes:f.size, type:f.type||'application/octet-stream'})});
+    let uploadUrl = normalizeSignedUrl(prep.uploadUrl);
+    if(!uploadUrl.startsWith('https://')) throw new Error('Signed URL starter ikke med https://');
+    log('Signed URL HTTPS: '+uploadUrl.slice(0,55)+'...');
     log('Uploader direkte til Cloudflare R2...');
-    const put = await fetch(signed.uploadUrl, { method:'PUT', headers:{ 'Content-Type': file.type || 'application/octet-stream' }, body:file });
-    if(!put.ok) throw new Error(`R2 upload svarede ${put.status}. Tjek R2 bucket CORS.`);
-    log('R2 upload OK. Gemmer metadata...');
-    await jsonFetch(`${baseUrl()}/api/confirm-upload`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email:email(), id:signed.id, key:signed.key, fileName:file.name, sizeBytes:file.size, mimeType:file.type || 'application/octet-stream' })
-    });
-    document.getElementById('uploadInfo').textContent = `Upload færdig: ${file.name}`;
-    log('UPLOAD OK: '+file.name);
-    await getAccount(); await getFiles();
-  }catch(e){ log('FEJL upload: '+e.message); }
+    // Do not send Content-Type. Server signs only host to avoid FBX/GLB MIME mismatch.
+    const put = await fetch(uploadUrl, { method:'PUT', body:f });
+    if(!put.ok){ const t=await put.text().catch(()=> ''); throw new Error(`R2 svarede ${put.status}: ${t.slice(0,200)}`); }
+    await api('/api/complete-upload', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email(), key:prep.key, fileName:f.name, sizeBytes:f.size, type:f.type||'application/octet-stream'})});
+    document.getElementById('uploadStatus').textContent='Upload færdig.';
+    log('UPLOAD OK: '+f.name);
+    await loadAccount(); await loadFiles();
+  }catch(e){ document.getElementById('uploadStatus').textContent='Upload fejlede.'; log('FEJL upload: '+e.message); }
 }
-async function getFiles(){
+async function loadFiles(){
   try{
-    if(!email()) return log('FEJL: E-mail mangler.');
-    log('Henter bibliotek...');
-    const data=await jsonFetch(`${baseUrl()}/api/files?email=${encodeURIComponent(email())}`);
-    const wrap=document.getElementById('files');
-    if(!data.files.length){ wrap.className='files empty'; wrap.textContent='Ingen filer endnu. Upload din første FBX, GLB, GLTF eller ZIP.'; return; }
-    wrap.className='files';
-    wrap.innerHTML = data.files.map(f=>`<div class="file"><h3>${escapeHtml(f.originalName)}</h3><small>${f.extension||''} · ${fmt(f.sizeBytes)} · ${new Date(f.createdAt).toLocaleString('da-DK')}</small><div class="actions"><button onclick="downloadFile('${f.id}')">Download</button><button class="secondary" onclick="deleteFile('${f.id}')">Slet</button></div></div>`).join('');
-    log(`Bibliotek OK: ${data.files.length} filer`);
+    log('Henter bibliotek...'); const d=await api('/api/files?email='+encodeURIComponent(email())); const box=document.getElementById('files');
+    if(!d.files.length){ box.className='files empty'; box.textContent='Ingen filer endnu. Upload din første 3D-fil.'; return; }
+    box.className='files'; box.innerHTML='';
+    d.files.forEach(file=>{
+      const el=document.createElement('div'); el.className='file';
+      el.innerHTML=`<div><b>${file.originalName}</b><br><small>${fmt(file.sizeBytes)} · ${new Date(file.createdAt).toLocaleString('da-DK')}</small></div><div class="actions"><button data-dl="${file.id}">Download</button><button class="secondary" data-copy="${file.id}">Kopier link</button><button class="secondary" data-del="${file.id}">Slet</button></div>`;
+      box.appendChild(el);
+    });
+    box.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>downloadFile(b.dataset.dl));
+    box.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyLink(b.dataset.copy));
+    box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteFile(b.dataset.del));
+    log(`Bibliotek OK: ${d.files.length} filer`);
   }catch(e){ log('FEJL bibliotek: '+e.message); }
 }
 async function downloadFile(id){
-  try{
-    log('Henter download-link...');
-    const data=await jsonFetch(`${baseUrl()}/api/download/${id}?email=${encodeURIComponent(email())}`);
-    if(data.downloadUrl){ window.open(data.downloadUrl, '_blank'); log('Download-link åbnet.'); }
-    else log('Download svar modtaget.');
-  }catch(e){ log('FEJL download: '+e.message); }
+  try{ const d=await api('/api/download-url/'+id+'?email='+encodeURIComponent(email())); window.open(normalizeSignedUrl(d.url),'_blank'); log('Downloadlink åbnet.'); }
+  catch(e){ log('FEJL download: '+e.message); }
+}
+async function copyLink(id){
+  try{ const d=await api('/api/download-url/'+id+'?email='+encodeURIComponent(email())); await navigator.clipboard.writeText(normalizeSignedUrl(d.url)); log('Link kopieret.'); }
+  catch(e){ log('FEJL kopier link: '+e.message); }
 }
 async function deleteFile(id){
-  if(!confirm('Slet filen fra biblioteket?')) return;
-  try{
-    log('Sletter metadata...');
-    // Try direct R2 physical delete first, then metadata delete.
-    try{
-      const d=await jsonFetch(`${baseUrl()}/api/delete-url/${id}?email=${encodeURIComponent(email())}`);
-      await fetch(d.deleteUrl,{method:'DELETE'});
-      log('R2 objekt slettet direkte.');
-    }catch(e){ log('Bemærk: direkte R2-sletning sprang over: '+e.message); }
-    await jsonFetch(`${baseUrl()}/api/files/${id}?email=${encodeURIComponent(email())}`, {method:'DELETE'});
-    log('SLET OK'); await getFiles(); await getAccount();
-  }catch(e){ log('FEJL slet: '+e.message); }
+  if(!confirm('Slet filen?')) return;
+  try{ const d=await api('/api/delete-url/'+id+'?email='+encodeURIComponent(email())); const r=await fetch(normalizeSignedUrl(d.url), {method:'DELETE'}); if(!r.ok) throw new Error('R2 delete '+r.status); await api('/api/complete-delete/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email()})}); log('Filen er slettet.'); await loadFiles(); await loadAccount(); }
+  catch(e){ log('FEJL slet: '+e.message); }
 }
-function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-document.getElementById('fileInput').addEventListener('change', e=>{ const f=e.target.files[0]; document.getElementById('uploadInfo').textContent=f?`Valgt: ${f.name} (${fmt(f.size)})`:'Ingen fil valgt.'; });
-log('Klar. v0.5.3 bruger signed direct upload til R2.');
+log('Klar. v0.5.4 retter signed URL HTTPS og undgår Content-Type mismatch.');
