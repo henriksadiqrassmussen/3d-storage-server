@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } });
 const PORT = process.env.PORT || 3000;
-const VERSION = '0.6.1';
+const VERSION = '0.6.2';
 
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'vault1973@gmail.com').toLowerCase().trim();
 const STORAGE_DRIVER = process.env.STORAGE_DRIVER || 'r2-worker';
@@ -45,7 +45,7 @@ app.get('/health', async (req,res)=>{
   if (WORKER_URL && WORKER_SHARED_SECRET) {
     try { const r = await fetch(WORKER_URL + '/health'); const j = await r.json(); workerPing = !!j.ok && !!j.bucketReady; } catch {}
   }
-  res.json({ ok:true, version:VERSION, storageDriver:STORAGE_DRIVER, pricing:'1GB=1EUR', node:process.version, r2Mode:'railway-worker-proxy-sales-ui', workerReady: !!(WORKER_URL && WORKER_SHARED_SECRET && workerPing), workerUrlSet: !!WORKER_URL, workerSecretSet: !!WORKER_SHARED_SECRET, workerPing, ui:'sales-ready' });
+  res.json({ ok:true, version:VERSION, storageDriver:STORAGE_DRIVER, pricing:'1GB=1EUR', node:process.version, r2Mode:'railway-worker-proxy-clean-bilingual-ui', workerReady: !!(WORKER_URL && WORKER_SHARED_SECRET && workerPing), workerUrlSet: !!WORKER_URL, workerSecretSet: !!WORKER_SHARED_SECRET, workerPing, ui:'clean-bilingual' });
 });
 app.get('/api/me', (req,res)=>{
   const email = cleanEmail(req.query.email);
