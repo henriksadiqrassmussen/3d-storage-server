@@ -1,19 +1,9 @@
 {
   "name": "3d-storage-website",
-  "version": "0.6.0",
-  "description": "3D Storage website with Railway to Cloudflare Worker R2 proxy upload",
+  "version": "0.6.1",
+  "description": "3D Storage sales-ready website with R2 Worker proxy upload",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1",
-    "google-auth-library": "^9.14.2"
-  },
-  "engines": {
-    "node": "20.x"
-  }
+  "scripts": { "start": "node server.js", "dev": "node server.js" },
+  "dependencies": { "cors": "^2.8.5", "express": "^4.19.2", "multer": "^1.4.5-lts.1" },
+  "engines": { "node": "20.x" }
 }
