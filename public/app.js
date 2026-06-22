@@ -44,13 +44,13 @@ const i18n = {
 
     pricingEyebrow:'Priser',
     pricingTitle:'1 GB = 1 euro.',
-    pricingLead:'Vælg lagerplads efter behov. Betaling kobles på i næste Stripe-version.',
-    pricingNoteTitle:'Ingen gratis-knap på salgssiden.',
-    pricingNoteText:'Kunder sendes til priser, ikke gratis oprettelse.',
+    pricingLead:'Vælg lagerplads og betal sikkert med Stripe Checkout.',
+    pricingNoteTitle:'Betaling via Stripe Checkout.',
+    pricingNoteText:'Når Stripe webhook er sat op, bliver kvoten opdateret automatisk efter betaling.',
     month1:'måned',
     month2:'måned',
     month3:'måned',
-    month4:'måned',
+    month4:'måned', pricingEmailLabel:'E-mail til betaling', buy1:'Vælg 1 GB', buy5:'Vælg 5 GB', buy25:'Vælg 25 GB', buy100:'Vælg 100 GB', checkoutStarting:'Åbner Stripe Checkout...', checkoutError:'Stripe-fejl',
 
     downloadsEyebrow:'Downloads',
     downloadsTitle:'Hent apps og værktøjer.',
@@ -59,7 +59,7 @@ const i18n = {
     apkText:'Til telefon',
     pcTitle:'PC Companion',
     pcText:'Til Windows',
-    footerText:'v0.6.5 Sales polish',
+    footerText:'v0.7.0 Stripe login ready',
 
     chooseFirst:'Vælg en fil først.',
     testing:'Tester server...',
@@ -81,7 +81,7 @@ const i18n = {
     deleteError:'FEJL slet',
     download:'Download',
     delete:'Slet',
-    ready:'Klar. v0.6.5 Sales polish uden Start gratis.',
+    ready:'Klar. v0.7.0 Stripe-login er klar.',
     apkReady:'APK klar',
     apkMissing:'APK mangler',
     pcReady:'PC Companion klar',
@@ -130,13 +130,13 @@ const i18n = {
 
     pricingEyebrow:'Pricing',
     pricingTitle:'1 GB = 1 euro.',
-    pricingLead:'Choose storage when you need it. Payment will be connected in the next Stripe version.',
-    pricingNoteTitle:'No free button on the sales page.',
-    pricingNoteText:'Customers are sent to pricing, not free signup.',
+    pricingLead:'Choose storage and pay securely with Stripe Checkout.',
+    pricingNoteTitle:'Payment via Stripe Checkout.',
+    pricingNoteText:'When the Stripe webhook is configured, quota updates automatically after payment.',
     month1:'month',
     month2:'month',
     month3:'month',
-    month4:'month',
+    month4:'month', pricingEmailLabel:'Payment e-mail', buy1:'Choose 1 GB', buy5:'Choose 5 GB', buy25:'Choose 25 GB', buy100:'Choose 100 GB', checkoutStarting:'Opening Stripe Checkout...', checkoutError:'Stripe error',
 
     downloadsEyebrow:'Downloads',
     downloadsTitle:'Get apps and tools.',
@@ -145,7 +145,7 @@ const i18n = {
     apkText:'For phone',
     pcTitle:'PC Companion',
     pcText:'For Windows',
-    footerText:'v0.6.5 Sales polish',
+    footerText:'v0.7.0 Stripe login ready',
 
     chooseFirst:'Choose a file first.',
     testing:'Testing server...',
@@ -167,7 +167,7 @@ const i18n = {
     deleteError:'ERROR delete',
     download:'Download',
     delete:'Delete',
-    ready:'Ready. v0.6.5 Sales polish without Start free.',
+    ready:'Ready. v0.7.0 Stripe login is ready.',
     apkReady:'APK ready',
     apkMissing:'APK missing',
     pcReady:'PC Companion ready',
@@ -329,9 +329,31 @@ async function downloadStatus(){
   }catch{}
 }
 
+async function startCheckout(planId){
+  const pricingEmail = $('pricingEmail')?.value?.trim() || email();
+  if(!pricingEmail) return alert(currentLang === 'da' ? 'Skriv e-mail først' : 'Enter e-mail first');
+  try{
+    log(t('checkoutStarting'));
+    const r = await fetch('/api/stripe/create-checkout-session', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ email: pricingEmail, planId })
+    });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || 'Stripe error');
+    window.location.href = j.url;
+  }catch(e){
+    alert(`${t('checkoutError')}: ${e.message}`);
+    log(`${t('checkoutError')}: ${e.message}`);
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   applyLang();
-  showPage('home');
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('stripe') === 'success') { showPage('app'); log(currentLang === 'da' ? 'Stripe betaling gennemført. Hent konto igen om lidt.' : 'Stripe payment completed. Reload account shortly.'); }
+  else if(params.get('stripe') === 'cancelled') { showPage('pricing'); log(currentLang === 'da' ? 'Stripe betaling blev annulleret.' : 'Stripe payment was cancelled.'); }
+  else showPage('home');
   testServer();
   downloadStatus();
   log(t('ready'));

@@ -129,16 +129,21 @@
             </div>
           </div>
 
+          <div class="pricing-login">
+            <label for="pricingEmail" data-i18n="pricingEmailLabel">E-mail til betaling</label>
+            <input id="pricingEmail" type="email" value="vault1973@gmail.com" autocomplete="email" />
+          </div>
+
           <div class="pricing-grid">
-            <article class="price-card featured"><strong>1 GB</strong><span>1 € / <span data-i18n="month1">måned</span></span></article>
-            <article class="price-card"><strong>5 GB</strong><span>5 € / <span data-i18n="month2">måned</span></span></article>
-            <article class="price-card"><strong>25 GB</strong><span>25 € / <span data-i18n="month3">måned</span></span></article>
-            <article class="price-card"><strong>100 GB</strong><span>100 € / <span data-i18n="month4">måned</span></span></article>
+            <article class="price-card featured"><strong>1 GB</strong><span>1 € / <span data-i18n="month1">måned</span></span><button class="btn btn-primary full" onclick="startCheckout('1gb')" data-i18n="buy1">Vælg 1 GB</button></article>
+            <article class="price-card"><strong>5 GB</strong><span>5 € / <span data-i18n="month2">måned</span></span><button class="btn btn-primary full" onclick="startCheckout('5gb')" data-i18n="buy5">Vælg 5 GB</button></article>
+            <article class="price-card"><strong>25 GB</strong><span>25 € / <span data-i18n="month3">måned</span></span><button class="btn btn-primary full" onclick="startCheckout('25gb')" data-i18n="buy25">Vælg 25 GB</button></article>
+            <article class="price-card"><strong>100 GB</strong><span>100 € / <span data-i18n="month4">måned</span></span><button class="btn btn-primary full" onclick="startCheckout('100gb')" data-i18n="buy100">Vælg 100 GB</button></article>
           </div>
 
           <div class="pricing-note">
-            <strong data-i18n="pricingNoteTitle">Ingen gratis-knap på salgssiden.</strong>
-            <span data-i18n="pricingNoteText">Kunder sendes til priser, ikke gratis oprettelse.</span>
+            <strong data-i18n="pricingNoteTitle">Betaling via Stripe Checkout.</strong>
+            <span data-i18n="pricingNoteText">Når Stripe webhook er sat op, bliver kvoten opdateret automatisk efter betaling.</span>
           </div>
         </section>
       </section>
@@ -175,7 +180,7 @@
 
     <footer class="footer">
       <strong>3D Storage</strong>
-      <span data-i18n="footerText">v0.6.5 Sales polish</span>
+      <span data-i18n="footerText">v0.7.0 Stripe login ready</span>
     </footer>
   </div>
 
