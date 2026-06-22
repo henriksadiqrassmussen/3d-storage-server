@@ -1,64 +1,111 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>3D Storage</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Storage — Lagerplads til 3D-filer</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <main class="shell">
-    <section class="hero glass">
-      <div>
-        <p class="eyebrow">Permanent 3D-lager</p>
-        <h1>3D Storage</h1>
-        <p>Upload, gem og hent FBX, GLB, GLTF og ZIP-filer permanent via Railway → Worker/R2. Pris: <b>1 GB = 1 euro</b>.</p>
-      </div>
-      <div class="heroActions">
-        <a class="btn" href="/downloads/3d-storage-android.apk">Download Android APK</a>
-        <a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">Download PC Companion</a>
-      </div>
-    </section>
+  <div class="bg-orb orb-one"></div>
+  <div class="bg-orb orb-two"></div>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="3D Storage forside"><span class="brand-mark">3D</span><span><strong>3D Storage</strong><small>FBX · GLB · ZIP</small></span></a>
+    <nav class="nav" aria-label="Hovedmenu">
+      <a href="#features">Funktioner</a>
+      <a href="#pricing">Priser</a>
+      <a href="#app">Upload</a>
+      <a href="#downloads">Downloads</a>
+    </nav>
+    <a class="header-cta" href="#app">Log ind</a>
+  </header>
 
-    <section class="grid two">
-      <section class="card glass">
-        <h2>Login</h2>
-        <label>Server URL<input id="baseUrl" value="https://www.3d-storage.org"></label>
-        <label>E-mail<input id="email" value="vault1973@gmail.com"></label>
-        <div class="row"><button onclick="testServer()">Test server</button><button onclick="loadMe()">Hent konto</button><button onclick="loadFiles()">Hent bibliotek</button></div>
-        <div class="googleBox">
-          <div id="googleLoginNotice" class="notice">Google-login tjekkes...</div>
-          <div id="googleButton"></div>
+  <main id="top">
+    <section class="hero section-grid">
+      <div class="hero-copy">
+        <div class="pill">Permanent 3D-lager · 1 GB = 1 euro</div>
+        <h1>Gem, hent og del dine 3D-filer — uden teknisk bøvl.</h1>
+        <p class="lead">3D Storage er lavet til begyndere, gamedev, Blender-brugere og små studios. Upload FBX, GLB, GLTF og ZIP direkte til sikker R2-lagerplads.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#app">Start gratis</a>
+          <a class="btn secondary" href="#downloads">Hent apps</a>
         </div>
-        <div id="account" class="notice">Klar.</div>
-      </section>
-
-      <section class="card glass">
-        <h2>Downloads</h2>
-        <p>Hent appene til telefon og PC. Læg de rigtige filer i <code>public/downloads</code>.</p>
-        <div id="downloadStatus" class="downloadStatus"></div>
-        <div class="row"><button onclick="checkDownloads()">Tjek downloads</button><a class="btn" href="/downloads/3d-storage-android.apk">APK</a><a class="btn secondary" href="/downloads/3D_Storage_PC_Companion.zip">PC ZIP</a></div>
-      </section>
+        <div class="trust-row">
+          <span>✓ Cloudflare R2</span><span>✓ Railway API</span><span>✓ PC + Android</span>
+        </div>
+      </div>
+      <aside class="hero-panel glass-card">
+        <div class="panel-top"><span class="dot online"></span><span id="heroStatus">Server klar</span></div>
+        <div class="storage-meter"><div class="meter-ring"><span>3D</span></div><div><strong>Dit 3D-bibliotek</strong><p>Upload animationer, modeller og projekter ét sted.</p></div></div>
+        <div class="mini-list">
+          <div><span>Idle.fbx</span><b>klar</b></div>
+          <div><span>Ninja.glb</span><b>hent</b></div>
+          <div><span>Project.zip</span><b>gemt</b></div>
+        </div>
+      </aside>
     </section>
 
-    <section class="card glass">
-      <h2>Upload 3D-fil</h2>
-      <p class="muted">Flow: vælg fil → tjek kvote → upload til R2 → vis i bibliotek.</p>
-      <input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip">
-      <button onclick="uploadFile()">Upload til permanent lager</button>
+    <section id="features" class="section">
+      <div class="section-title"><span class="eyebrow">Simpelt workflow</span><h2>Bygget til folk der vil arbejde — ikke rode med servere.</h2></div>
+      <div class="feature-grid">
+        <article class="glass-card feature"><span class="icon">⬆</span><h3>Upload 3D-filer</h3><p>FBX, GLB, GLTF og ZIP. Vælg fil → upload → se resultat.</p></article>
+        <article class="glass-card feature"><span class="icon">☁</span><h3>Permanent lager</h3><p>Filer gemmes i Cloudflare R2 via Worker, så de ikke forsvinder ved redeploy.</p></article>
+        <article class="glass-card feature"><span class="icon">📱</span><h3>Android + PC</h3><p>Hent APK og PC Companion, så telefon og computer kan arbejde sammen.</p></article>
+        <article class="glass-card feature"><span class="icon">🔐</span><h3>Ejerkonto gratis</h3><p>vault1973@gmail.com er OWNER_FREE med stor testkvote.</p></article>
+      </div>
     </section>
 
-    <section class="card glass">
-      <h2>3D Bibliotek</h2>
-      <div id="files" class="files"><p>Ingen filer vist endnu. Tryk “Hent bibliotek”.</p></div>
+    <section id="pricing" class="section pricing-section">
+      <div class="section-title"><span class="eyebrow">Pris</span><h2>Enkelt og let at forstå: 1 GB = 1 euro pr. måned.</h2></div>
+      <div class="price-grid">
+        <article class="price-card glass-card"><h3>1 GB</h3><div class="price">1€<span>/md</span></div><p>Til test og små filer.</p><button class="btn secondary" onclick="scrollToApp()">Vælg</button></article>
+        <article class="price-card glass-card popular"><div class="badge">Populær</div><h3>5 GB</h3><div class="price">5€<span>/md</span></div><p>God til flere figurer og animationer.</p><button class="btn primary" onclick="scrollToApp()">Vælg</button></article>
+        <article class="price-card glass-card"><h3>25 GB</h3><div class="price">25€<span>/md</span></div><p>Til små studios og projekter.</p><button class="btn secondary" onclick="scrollToApp()">Vælg</button></article>
+        <article class="price-card glass-card"><h3>100 GB</h3><div class="price">100€<span>/md</span></div><p>Til større 3D-biblioteker.</p><button class="btn secondary" onclick="scrollToApp()">Vælg</button></article>
+      </div>
     </section>
 
-    <section class="card log glass">
-      <h2>Log</h2>
-      <div id="log"></div>
+    <section id="app" class="section app-shell glass-card">
+      <div class="app-sidebar">
+        <div class="app-logo">3D</div>
+        <button class="tab active" data-tab="dashboard">Forside</button>
+        <button class="tab" data-tab="upload">Upload</button>
+        <button class="tab" data-tab="library">Bibliotek</button>
+        <button class="tab" data-tab="downloads">Downloads</button>
+      </div>
+      <div class="app-main">
+        <div class="app-topbar"><div><h2>Kontrolpanel</h2><p>Log ind, upload og hent dine 3D-filer.</p></div><div class="status-chip" id="statusChip">Ikke logget ind</div></div>
+
+        <section class="tab-panel show" id="dashboard">
+          <div class="cards-3">
+            <div class="card"><h3>Konto</h3><label for="email">E-mail</label><input id="email" type="email" value="vault1973@gmail.com" /><button class="btn primary full" onclick="loadAccount()">Hent konto</button></div>
+            <div class="card"><h3>Server</h3><p id="serverText">www.3d-storage.org</p><button class="btn secondary full" onclick="testServer()">Test server</button></div>
+            <div class="card"><h3>Lagerplads</h3><p class="big" id="quotaText">—</p><div class="progress"><span id="quotaBar"></span></div></div>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="upload">
+          <div class="upload-zone" id="dropZone"><span>📦</span><h3>Vælg eller slip 3D-fil her</h3><p>FBX, GLB, GLTF eller ZIP</p><input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip" /><button class="btn primary" onclick="uploadFile()">Upload fil</button></div>
+        </section>
+
+        <section class="tab-panel" id="library">
+          <div class="panel-header"><h3>3D Bibliotek</h3><button class="btn secondary" onclick="loadFiles()">Hent bibliotek</button></div>
+          <div id="fileList" class="file-grid empty">Ingen filer endnu. Upload din første 3D-fil.</div>
+        </section>
+
+        <section class="tab-panel" id="downloads">
+          <div class="download-grid" id="downloadsBox">
+            <a class="download-card" href="/downloads/3d-storage-android.apk"><strong>Android APK</strong><span>Hent app til telefon</span></a>
+            <a class="download-card" href="/downloads/3D_Storage_PC_Companion.zip"><strong>PC Companion</strong><span>Hent Windows-makker</span></a>
+          </div>
+        </section>
+
+        <div class="log-box"><div class="log-head">Log</div><div id="log"></div></div>
+      </div>
     </section>
   </main>
+
+  <footer class="footer"><strong>3D Storage</strong><span>Permanent lager til 3D-filer · v0.6.1 Sales Ready UI</span></footer>
   <script src="/app.js"></script>
 </body>
 </html>
