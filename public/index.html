@@ -3,129 +3,153 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>3D Storage — Simple 3D file storage</title>
+  <title>3D Storage</title>
+  <meta name="description" content="3D Storage - simple 3D file storage for web, PC and Android." />
+  <link rel="icon" type="image/png" href="/assets/app_icon_3d_storage.png" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <div class="soft-bg"></div>
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="3D Storage home">
-      <span class="brand-mark">3D</span>
-      <span><strong>3D Storage</strong><small data-i18n="brandSub">FBX · GLB · ZIP</small></span>
-    </a>
-    <nav class="nav" aria-label="Main navigation">
-      <a href="#app" data-i18n="navApp">Upload</a>
-      <a href="#pricing" data-i18n="navPricing">Pris</a>
-      <a href="#downloads" data-i18n="navDownloads">Downloads</a>
-    </nav>
-    <div class="header-actions">
-      <div class="lang-switch" aria-label="Language switcher">
-        <button id="langDa" class="lang active" onclick="setLang('da')">DA</button>
-        <button id="langEn" class="lang" onclick="setLang('en')">EN</button>
-      </div>
-      <a class="btn small primary" href="#app" data-i18n="loginTop">Log ind</a>
-    </div>
-  </header>
-
-  <main id="top">
-    <section class="hero compact">
-      <div class="hero-copy">
-        <div class="pill" data-i18n="pill">Permanent 3D-lager · 1 GB = 1 euro</div>
-        <h1 data-i18n="heroTitle">Et enkelt sted til dine 3D-filer.</h1>
-        <p class="lead" data-i18n="heroLead">Upload FBX, GLB, GLTF og ZIP. Hent dem igen fra web, PC eller Android — uden teknisk rod.</p>
-        <div class="hero-actions">
-          <a class="btn primary" href="#app" data-i18n="ctaStart">Start gratis</a>
-          <a class="btn secondary" href="#downloads" data-i18n="ctaDownload">Hent apps</a>
+  <div class="site-shell">
+    <header class="topbar glass">
+      <button class="brand brand-btn" onclick="showPage('home')" aria-label="3D Storage home">
+        <img src="/assets/app_icon_3d_storage.png" alt="3D Storage icon" class="brand-icon" />
+        <span class="brand-text">
+          <strong>3D Storage</strong>
+          <small data-i18n="brandSub">Cloud storage for 3D files</small>
+        </span>
+      </button>
+      <nav class="nav" aria-label="Main navigation">
+        <button class="nav-link active" data-page="home" onclick="showPage('home')" data-i18n="navHome">Forside</button>
+        <button class="nav-link" data-page="app" onclick="showPage('app')" data-i18n="navApp">App</button>
+        <button class="nav-link" data-page="pricing" onclick="showPage('pricing')" data-i18n="navPricing">Priser</button>
+        <button class="nav-link" data-page="downloads" onclick="showPage('downloads')" data-i18n="navDownloads">Downloads</button>
+      </nav>
+      <div class="header-tools">
+        <div class="lang-switch" aria-label="Language switcher">
+          <button id="langDa" class="lang active" onclick="setLang('da')">DA</button>
+          <button id="langEn" class="lang" onclick="setLang('en')">EN</button>
         </div>
+        <button class="btn btn-primary" onclick="showPage('app')" data-i18n="headerCta">Åbn app</button>
       </div>
-      <aside class="summary-card glass">
-        <div class="summary-line"><span class="dot online"></span><strong data-i18n="statusReady">Server klar</strong></div>
-        <div class="summary-big">1 GB = 1€</div>
-        <p data-i18n="summaryText">Enkel pris. Permanent R2-lager. Gratis ejerkonto.</p>
-      </aside>
-    </section>
+    </header>
 
-    <section class="simple-strip" aria-label="Key benefits">
-      <article><strong data-i18n="benefit1Title">Upload</strong><span data-i18n="benefit1Text">Vælg fil og gem.</span></article>
-      <article><strong data-i18n="benefit2Title">Hent</strong><span data-i18n="benefit2Text">Download når du vil.</span></article>
-      <article><strong data-i18n="benefit3Title">Del</strong><span data-i18n="benefit3Text">PC, web og Android.</span></article>
-    </section>
-
-    <section id="app" class="app-panel glass">
-      <div class="app-head">
-        <div>
-          <span class="eyebrow" data-i18n="appEyebrow">Kontrolpanel</span>
-          <h2 data-i18n="appTitle">Upload og bibliotek</h2>
-          <p data-i18n="appLead">Log ind med e-mail, upload en 3D-fil og hent biblioteket.</p>
-        </div>
-        <div class="status-chip" id="statusChip" data-i18n="statusLoggedOut">Ikke logget ind</div>
-      </div>
-
-      <div class="workflow-grid">
-        <section class="card login-card">
-          <h3 data-i18n="step1">1. Login</h3>
-          <label for="email" data-i18n="emailLabel">E-mail</label>
-          <input id="email" type="email" value="vault1973@gmail.com" autocomplete="email" />
-          <div class="button-row">
-            <button class="btn secondary" onclick="testServer()" data-i18n="testServer">Test server</button>
-            <button class="btn primary" onclick="loadAccount()" data-i18n="getAccount">Hent konto</button>
+    <main class="content-area">
+      <section id="page-home" class="page active">
+        <section class="hero glass">
+          <div class="hero-copy">
+            <span class="eyebrow" data-i18n="heroEyebrow">Permanent 3D storage</span>
+            <h1 data-i18n="heroTitle">Gem dine 3D-filer ét sted.</h1>
+            <p class="lead" data-i18n="heroLead">Upload FBX, GLB, GLTF og ZIP. Hent dem igen fra web, PC og Android i et enkelt og professionelt system.</p>
+            <div class="hero-actions">
+              <button class="btn btn-primary" onclick="showPage('app')" data-i18n="heroPrimary">Start gratis</button>
+              <button class="btn btn-secondary" onclick="showPage('downloads')" data-i18n="heroSecondary">Hent apps</button>
+            </div>
           </div>
-          <p class="muted" id="quotaText">—</p>
-          <div class="progress" aria-label="Storage usage"><span id="quotaBar"></span></div>
+          <div class="hero-art">
+            <img src="/assets/background_3d_storage.png" alt="3D Storage background illustration" />
+          </div>
         </section>
 
-        <section class="card upload-card">
-          <h3 data-i18n="step2">2. Upload</h3>
-          <div class="upload-box" id="dropZone">
-            <span>📦</span>
-            <strong data-i18n="chooseFile">Vælg 3D-fil</strong>
-            <small data-i18n="fileTypes">FBX, GLB, GLTF eller ZIP</small>
-            <input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip" />
-          </div>
-          <button class="btn primary full" onclick="uploadFile()" data-i18n="uploadBtn">Upload fil</button>
+        <section class="feature-row">
+          <article class="mini-card glass"><strong data-i18n="feature1Title">Enkel upload</strong><p data-i18n="feature1Text">Vælg fil, upload og se den i biblioteket.</p></article>
+          <article class="mini-card glass"><strong data-i18n="feature2Title">Permanent lager</strong><p data-i18n="feature2Text">Dine filer gemmes i Cloudflare R2.</p></article>
+          <article class="mini-card glass"><strong data-i18n="feature3Title">Web, PC og Android</strong><p data-i18n="feature3Text">Brug samme bibliotek på tværs af enheder.</p></article>
         </section>
+      </section>
 
-        <section class="card library-card">
-          <div class="card-row">
-            <h3 data-i18n="step3">3. Bibliotek</h3>
-            <button class="btn secondary small" onclick="loadFiles()" data-i18n="refreshLibrary">Hent</button>
+      <section id="page-app" class="page">
+        <section class="panel glass">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow" data-i18n="appEyebrow">Kontrolpanel</span>
+              <h2 data-i18n="appTitle">Login, upload og bibliotek</h2>
+              <p data-i18n="appLead">Log ind med e-mail, upload en fil og hent dit bibliotek.</p>
+            </div>
+            <div class="status-chip" id="statusChip" data-i18n="statusLoggedOut">Ikke logget ind</div>
           </div>
-          <div id="fileList" class="file-list empty" data-i18n="emptyFiles">Ingen filer endnu.</div>
+          <div class="workflow-grid">
+            <section class="card">
+              <h3 data-i18n="step1">1. Login</h3>
+              <label for="email" data-i18n="emailLabel">E-mail</label>
+              <input id="email" type="email" value="vault1973@gmail.com" autocomplete="email" />
+              <div class="button-row">
+                <button class="btn btn-secondary" onclick="testServer()" data-i18n="testServer">Test server</button>
+                <button class="btn btn-primary" onclick="loadAccount()" data-i18n="getAccount">Hent konto</button>
+              </div>
+              <p class="muted" id="quotaText">—</p>
+              <div class="progress"><span id="quotaBar"></span></div>
+            </section>
+            <section class="card">
+              <h3 data-i18n="step2">2. Upload</h3>
+              <div class="upload-box">
+                <span class="upload-icon">📦</span>
+                <strong data-i18n="chooseFile">Vælg 3D-fil</strong>
+                <small data-i18n="fileTypes">FBX, GLB, GLTF eller ZIP</small>
+                <input id="fileInput" type="file" accept=".fbx,.glb,.gltf,.zip" />
+              </div>
+              <button class="btn btn-primary full" onclick="uploadFile()" data-i18n="uploadBtn">Upload fil</button>
+            </section>
+            <section class="card library-card">
+              <div class="card-head-inline">
+                <h3 data-i18n="step3">3. Bibliotek</h3>
+                <button class="btn btn-secondary small" onclick="loadFiles()" data-i18n="refreshLibrary">Hent bibliotek</button>
+              </div>
+              <div id="fileList" class="file-list empty" data-i18n="emptyFiles">Ingen filer endnu.</div>
+            </section>
+          </div>
+          <details class="log-details">
+            <summary data-i18n="showLog">Vis log</summary>
+            <div id="log" class="log-box"></div>
+          </details>
         </section>
-      </div>
+      </section>
 
-      <details class="log-details">
-        <summary data-i18n="showLog">Vis log</summary>
-        <div id="log" class="log-box"></div>
-      </details>
-    </section>
+      <section id="page-pricing" class="page">
+        <section class="panel glass narrow">
+          <div class="panel-head simple">
+            <div>
+              <span class="eyebrow" data-i18n="pricingEyebrow">Priser</span>
+              <h2 data-i18n="pricingTitle">Vælg lagerplads efter behov.</h2>
+              <p data-i18n="pricingLead">Ingen prisblokke på forsiden. Her ser du hele prislisten.</p>
+            </div>
+          </div>
+          <div class="pricing-grid">
+            <article class="price-card featured"><strong>1 GB</strong><span>1 € / <span data-i18n="month1">måned</span></span></article>
+            <article class="price-card"><strong>5 GB</strong><span>5 € / <span data-i18n="month2">måned</span></span></article>
+            <article class="price-card"><strong>25 GB</strong><span>25 € / <span data-i18n="month3">måned</span></span></article>
+            <article class="price-card"><strong>100 GB</strong><span>100 € / <span data-i18n="month4">måned</span></span></article>
+          </div>
+        </section>
+      </section>
 
-    <section id="pricing" class="mini-section">
-      <div class="section-heading">
-        <span class="eyebrow" data-i18n="pricingEyebrow">Pris</span>
-        <h2 data-i18n="pricingTitle">Betal kun for den lagerplads du vælger.</h2>
-      </div>
-      <div class="price-row">
-        <article class="price-card"><strong>1 GB</strong><span>1€ / <span data-i18n="month">md</span></span></article>
-        <article class="price-card"><strong>5 GB</strong><span>5€ / <span data-i18n="month2">md</span></span></article>
-        <article class="price-card"><strong>25 GB</strong><span>25€ / <span data-i18n="month3">md</span></span></article>
-        <article class="price-card"><strong>100 GB</strong><span>100€ / <span data-i18n="month4">md</span></span></article>
-      </div>
-    </section>
+      <section id="page-downloads" class="page">
+        <section class="panel glass narrow">
+          <div class="panel-head simple">
+            <div>
+              <span class="eyebrow" data-i18n="downloadsEyebrow">Downloads</span>
+              <h2 data-i18n="downloadsTitle">Hent apps og værktøjer.</h2>
+              <p data-i18n="downloadsLead">Download Android APK og PC Companion, når de ligger på serveren.</p>
+            </div>
+          </div>
+          <div class="download-grid">
+            <a class="download-card" href="/downloads/3d-storage-android.apk">
+              <img src="/assets/app_icon_3d_storage.png" alt="Android APK" class="download-icon" />
+              <div><strong data-i18n="apkTitle">Android APK</strong><span id="apkStatus" data-i18n="apkText">Til telefon</span></div>
+            </a>
+            <a class="download-card" href="/downloads/3D_Storage_PC_Companion.zip">
+              <img src="/assets/app_icon_3d_storage.png" alt="PC Companion" class="download-icon" />
+              <div><strong data-i18n="pcTitle">PC Companion</strong><span id="pcStatus" data-i18n="pcText">Til Windows</span></div>
+            </a>
+          </div>
+        </section>
+      </section>
+    </main>
 
-    <section id="downloads" class="mini-section downloads-section">
-      <div class="section-heading">
-        <span class="eyebrow" data-i18n="downloadsEyebrow">Downloads</span>
-        <h2 data-i18n="downloadsTitle">Hent appene når de er lagt på serveren.</h2>
-      </div>
-      <div class="download-row">
-        <a class="download-card" href="/downloads/3d-storage-android.apk"><strong data-i18n="apkTitle">Android APK</strong><span data-i18n="apkText">Til telefon</span></a>
-        <a class="download-card" href="/downloads/3D_Storage_PC_Companion.zip"><strong data-i18n="pcTitle">PC Companion</strong><span data-i18n="pcText">Til Windows</span></a>
-      </div>
-    </section>
-  </main>
-
-  <footer class="footer"><strong>3D Storage</strong><span data-i18n="footerText">v0.6.2 Clean bilingual UI</span></footer>
+    <footer class="footer">
+      <strong>3D Storage</strong>
+      <span data-i18n="footerText">v0.6.3 Clean UI with assets</span>
+    </footer>
+  </div>
   <script src="/app.js"></script>
 </body>
 </html>
