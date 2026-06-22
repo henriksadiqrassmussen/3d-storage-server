@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>3D Storage</title>
-  <meta name="description" content="3D Storage - simple 3D file storage for web, PC and Android." />
+  <meta name="description" content="3D Storage - professional cloud storage for 3D files." />
   <link rel="icon" type="image/png" href="/assets/app_icon_3d_storage.png" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -15,21 +15,23 @@
         <img src="/assets/app_icon_3d_storage.png" alt="3D Storage icon" class="brand-icon" />
         <span class="brand-text">
           <strong>3D Storage</strong>
-          <small data-i18n="brandSub">Cloud storage for 3D files</small>
+          <small data-i18n="brandSub">Professional 3D file storage</small>
         </span>
       </button>
+
       <nav class="nav" aria-label="Main navigation">
         <button class="nav-link active" data-page="home" onclick="showPage('home')" data-i18n="navHome">Forside</button>
         <button class="nav-link" data-page="app" onclick="showPage('app')" data-i18n="navApp">App</button>
         <button class="nav-link" data-page="pricing" onclick="showPage('pricing')" data-i18n="navPricing">Priser</button>
         <button class="nav-link" data-page="downloads" onclick="showPage('downloads')" data-i18n="navDownloads">Downloads</button>
       </nav>
+
       <div class="header-tools">
         <div class="lang-switch" aria-label="Language switcher">
           <button id="langDa" class="lang active" onclick="setLang('da')">DA</button>
           <button id="langEn" class="lang" onclick="setLang('en')">EN</button>
         </div>
-        <button class="btn btn-primary" onclick="showPage('app')" data-i18n="headerCta">Åbn app</button>
+        <button class="btn btn-primary" onclick="showPage('pricing')" data-i18n="headerCta">Se priser</button>
       </div>
     </header>
 
@@ -37,23 +39,32 @@
       <section id="page-home" class="page active">
         <section class="hero glass">
           <div class="hero-copy">
-            <span class="eyebrow" data-i18n="heroEyebrow">Permanent 3D storage</span>
-            <h1 data-i18n="heroTitle">Gem dine 3D-filer ét sted.</h1>
-            <p class="lead" data-i18n="heroLead">Upload FBX, GLB, GLTF og ZIP. Hent dem igen fra web, PC og Android i et enkelt og professionelt system.</p>
+            <span class="eyebrow" data-i18n="heroEyebrow">Cloud storage til 3D-filer</span>
+            <h1 data-i18n="heroTitle">Et professionelt lager til dine 3D-filer.</h1>
+            <p class="lead" data-i18n="heroLead">Gem FBX, GLB, GLTF og ZIP ét sted. Bygget til kreative, udviklere og små teams der vil have orden på deres 3D-assets.</p>
             <div class="hero-actions">
-              <button class="btn btn-primary" onclick="showPage('app')" data-i18n="heroPrimary">Start gratis</button>
-              <button class="btn btn-secondary" onclick="showPage('downloads')" data-i18n="heroSecondary">Hent apps</button>
+              <button class="btn btn-primary" onclick="showPage('pricing')" data-i18n="heroPrimary">Se priser</button>
+              <button class="btn btn-secondary" onclick="showPage('app')" data-i18n="heroSecondary">Åbn app</button>
             </div>
           </div>
           <div class="hero-art">
-            <img src="/assets/background_3d_storage.png" alt="3D Storage background illustration" />
+            <img src="/assets/background_3d_storage.png" alt="3D Storage cloud storage illustration" />
           </div>
         </section>
 
-        <section class="feature-row">
-          <article class="mini-card glass"><strong data-i18n="feature1Title">Enkel upload</strong><p data-i18n="feature1Text">Vælg fil, upload og se den i biblioteket.</p></article>
-          <article class="mini-card glass"><strong data-i18n="feature2Title">Permanent lager</strong><p data-i18n="feature2Text">Dine filer gemmes i Cloudflare R2.</p></article>
-          <article class="mini-card glass"><strong data-i18n="feature3Title">Web, PC og Android</strong><p data-i18n="feature3Text">Brug samme bibliotek på tværs af enheder.</p></article>
+        <section class="trust-row">
+          <article class="mini-card glass">
+            <strong data-i18n="feature1Title">Upload uden rod</strong>
+            <p data-i18n="feature1Text">Vælg en 3D-fil og gem den direkte i dit bibliotek.</p>
+          </article>
+          <article class="mini-card glass">
+            <strong data-i18n="feature2Title">Permanent lager</strong>
+            <p data-i18n="feature2Text">Filer gemmes i Cloudflare R2 via Railway og Worker.</p>
+          </article>
+          <article class="mini-card glass">
+            <strong data-i18n="feature3Title">Klar til web og apps</strong>
+            <p data-i18n="feature3Text">Designet til hjemmeside, PC Companion og Android APK.</p>
+          </article>
         </section>
       </section>
 
@@ -67,6 +78,7 @@
             </div>
             <div class="status-chip" id="statusChip" data-i18n="statusLoggedOut">Ikke logget ind</div>
           </div>
+
           <div class="workflow-grid">
             <section class="card">
               <h3 data-i18n="step1">1. Login</h3>
@@ -79,6 +91,7 @@
               <p class="muted" id="quotaText">—</p>
               <div class="progress"><span id="quotaBar"></span></div>
             </section>
+
             <section class="card">
               <h3 data-i18n="step2">2. Upload</h3>
               <div class="upload-box">
@@ -89,6 +102,7 @@
               </div>
               <button class="btn btn-primary full" onclick="uploadFile()" data-i18n="uploadBtn">Upload fil</button>
             </section>
+
             <section class="card library-card">
               <div class="card-head-inline">
                 <h3 data-i18n="step3">3. Bibliotek</h3>
@@ -97,6 +111,7 @@
               <div id="fileList" class="file-list empty" data-i18n="emptyFiles">Ingen filer endnu.</div>
             </section>
           </div>
+
           <details class="log-details">
             <summary data-i18n="showLog">Vis log</summary>
             <div id="log" class="log-box"></div>
@@ -109,15 +124,21 @@
           <div class="panel-head simple">
             <div>
               <span class="eyebrow" data-i18n="pricingEyebrow">Priser</span>
-              <h2 data-i18n="pricingTitle">Vælg lagerplads efter behov.</h2>
-              <p data-i18n="pricingLead">Ingen prisblokke på forsiden. Her ser du hele prislisten.</p>
+              <h2 data-i18n="pricingTitle">1 GB = 1 euro.</h2>
+              <p data-i18n="pricingLead">Vælg lagerplads efter behov. Betaling kobles på i næste Stripe-version.</p>
             </div>
           </div>
+
           <div class="pricing-grid">
             <article class="price-card featured"><strong>1 GB</strong><span>1 € / <span data-i18n="month1">måned</span></span></article>
             <article class="price-card"><strong>5 GB</strong><span>5 € / <span data-i18n="month2">måned</span></span></article>
             <article class="price-card"><strong>25 GB</strong><span>25 € / <span data-i18n="month3">måned</span></span></article>
             <article class="price-card"><strong>100 GB</strong><span>100 € / <span data-i18n="month4">måned</span></span></article>
+          </div>
+
+          <div class="pricing-note">
+            <strong data-i18n="pricingNoteTitle">Ingen gratis-knap på salgssiden.</strong>
+            <span data-i18n="pricingNoteText">Kunder sendes til priser, ikke gratis oprettelse.</span>
           </div>
         </section>
       </section>
@@ -131,14 +152,21 @@
               <p data-i18n="downloadsLead">Download Android APK og PC Companion, når de ligger på serveren.</p>
             </div>
           </div>
+
           <div class="download-grid">
             <a class="download-card" href="/downloads/3d-storage-android.apk">
               <img src="/assets/app_icon_3d_storage.png" alt="Android APK" class="download-icon" />
-              <div><strong data-i18n="apkTitle">Android APK</strong><span id="apkStatus" data-i18n="apkText">Til telefon</span></div>
+              <div>
+                <strong data-i18n="apkTitle">Android APK</strong>
+                <span id="apkStatus" data-i18n="apkText">Til telefon</span>
+              </div>
             </a>
             <a class="download-card" href="/downloads/3D_Storage_PC_Companion.zip">
               <img src="/assets/app_icon_3d_storage.png" alt="PC Companion" class="download-icon" />
-              <div><strong data-i18n="pcTitle">PC Companion</strong><span id="pcStatus" data-i18n="pcText">Til Windows</span></div>
+              <div>
+                <strong data-i18n="pcTitle">PC Companion</strong>
+                <span id="pcStatus" data-i18n="pcText">Til Windows</span>
+              </div>
             </a>
           </div>
         </section>
@@ -147,9 +175,10 @@
 
     <footer class="footer">
       <strong>3D Storage</strong>
-      <span data-i18n="footerText">v0.6.4 Assets hard fixed</span>
+      <span data-i18n="footerText">v0.6.5 Sales polish</span>
     </footer>
   </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
